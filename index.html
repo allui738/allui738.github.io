@@ -519,6 +519,12 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 
 #tvol{flex:none;width:130px;min-height:32px;accent-color:#efc35a;background:none;border:0;padding:0}
 
+.jkpill{font:600 12px Inter,sans-serif;letter-spacing:.2px;text-transform:none;color:#2b1c00;background:var(--goldg);padding:5px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(201,150,47,.3)}
+.jkpill b{font-weight:800}
+.stats td small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.stats td,.stats th{padding-left:4px;padding-right:4px}
+.stnote{font-size:11px;color:var(--muted);margin:8px 2px 0}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -574,7 +580,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
     <div class="streets hide" id="streets" role="tablist" aria-label="Look back at a street"><button data-n="1">Preflop</button><button data-n="2">Flop</button><button data-n="3">Turn</button><button data-n="4">River</button></div>
   </div>
   <div class="seats" id="seats"></div>
-  <section class="stats"><h2>Standings</h2><div id="tally"><p class="empty">No hands finished yet.</p></div></section>
+  <section class="stats"><h2>Standings <span class="jkpill hide" id="jkpill"></span></h2><div id="tally"><p class="empty">No hands finished yet.</p></div></section>
   <p class="note">Everyone at your table sees the same hand live. Tap Invite to bring friends in. The phone that started the table hosts it, so keep it open. Standings follow each hand to the next dealer and are saved on your phone. Sit in to get dealt. If fewer people are seated than "Bots fill to", bots take the empty seats, so you can test alone. Whoever presses Deal is the dealer for that hand and controls the run-out. Hands use exactly 2 hole cards plus 3 from the board unless you set Hands to Any cards (best 5 from your flipped cards plus the board; Sweat flips only). The gold-raised cards are the ones playing. Equity is live: exact on the flop and turn, simulated preflop.</p>
 </div>
 <div class="sqz hide" id="sqz"><div class="sqbox"><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row"><button class="alt" id="sqrot">TURN SIDEWAYS</button></div><div class="row"><button class="alt" id="sqaside">SET ASIDE</button><button class="alt slamb" id="sqslam">SLAM IT<small>think you&rsquo;ve got the nuts?</small></button></div><div class="row"><button class="alt" id="sqclose">PUT IT BACK</button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
@@ -868,15 +874,20 @@ function drawSeats(g,hold,frozen){
   }).join('');
 }
 function bestPrev(h,g){const prev=g.b.slice(0,g.b.length===5?4:g.b.length===4?3:0).map(P);return best(h,prev)}
-function validSt(o){return o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).length<=40&&Object.values(o).every(v=>Array.isArray(v)&&(v.length===3||v.length===4)&&v.slice(0,3).every(x=>Number.isInteger(x)&&x>=0)&&(v.length===3||(typeof v[3]==='number'&&isFinite(v[3]))))}
+function validSt(o){return o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).length<=40&&Object.values(o).every(v=>Array.isArray(v)&&v.length>=3&&v.length<=5&&v.slice(0,3).every(x=>Number.isInteger(x)&&x>=0)&&v.slice(3).every(x=>typeof x==='number'&&isFinite(x)))}
 const stKey=()=>'of-st'+(window.OF_TABLE?'-'+window.OF_TABLE:'');
 function loadSt(){const o=store.get(stKey(),{});return validSt(o)?o:{}}
 let stE=0;
 function saveSt(o,e){if(e>=stE){stE=e;store.set(stKey(),o)}}
+function jpNow(g){if(!g||!g.jka)return null;const n=g.who.length,settled=g.m==='f'?!!g.done:g.n>=4,pr=g.jkp!==0;
+  if(settled)return{amt:pr?(g.jp||0):0,pr,hit:!!g.jh};return{amt:Math.round(((pr?(g.jp||0):0)+g.jka*n)*100)/100,pr,hit:false}}
 function drawStats(st){
-  const rows=Object.entries(st).map(([k,[w,c,l,net]])=>({k,w,c,l,net:net||0,n:w+c+l,p:(w+c/2)/Math.max(1,w+c+l)}));const anyNet=rows.some(r=>r.net);rows.sort((a,b)=>anyNet?(b.net-a.net||b.w-a.w):(b.w-a.w||b.p-a.p||a.l-b.l));
+  const jn=jpNow(G);$('jkpill').innerHTML=jn?`${jn.pr?'Progressive jackpot':'Bad beat jackpot'} <b>${money(jn.amt)}</b>`:'';$('jkpill').classList.toggle('hide',!jn);
+  const sg=x=>`<td class="${x>0?'pos':x<0?'neg':''}">${x>0?'+':''}${money(x)}</td>`;
+  const rows=Object.entries(st).map(([k,[w,c,l,net,jk]])=>({k,w,c,l,net:net||0,jk:jk||0,fl:Math.round(((net||0)-(jk||0))*100)/100,n:w+c+l,p:(w+c/2)/Math.max(1,w+c+l)}));
+  const anyNet=rows.some(r=>r.net||r.fl),anyJk=rows.some(r=>r.jk)||!!(G&&G.jka);rows.sort((a,b)=>anyNet?(b.net-a.net||b.w-a.w):(b.w-a.w||b.p-a.p||a.l-b.l));
   if(!rows.length){$('tally').innerHTML='<p class="empty">No hands finished yet.</p>';return}
-  $('tally').innerHTML=`<table><thead><tr><th>Player</th><th>Hands</th><th>Wins</th><th>Chops</th><th>Losses</th><th>Win %</th>${anyNet?'<th>Net</th>':''}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${i===0&&(anyNet?r.net>0:r.w>0)?'lead':''}"><td>${esc(r.k)}</td><td>${r.n}</td><td>${r.w}</td><td>${r.c}</td><td>${r.l}</td><td>${Math.round(r.p*100)}%</td>${anyNet?`<td class="${r.net>0?'pos':r.net<0?'neg':''}">${r.net>0?'+':''}${money(r.net)}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  $('tally').innerHTML=`<table><thead><tr><th>Player</th><th>W-C-L</th><th>Win %</th>${anyNet?`<th>Flips</th>${anyJk?'<th>Jackpot</th>':''}<th>Net</th>`:''}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${i===0&&(anyNet?r.net>0:r.w>0)?'lead':''}"><td>${esc(r.k)}<small>${r.n} hand${r.n===1?'':'s'}</small></td><td>${r.w}-${r.c}-${r.l}</td><td>${Math.round(r.p*100)}%</td>${anyNet?`${sg(r.fl)}${anyJk?sg(r.jk):''}${sg(r.net)}`:''}</tr>`).join('')}</tbody></table>${anyNet?`<p class="stnote">Flips = won or lost on hands${anyJk?' · Jackpot = put in minus paid out':''} · Net = total</p>`:''}`;
 }
 /* ---------- sweat flips ---------- */
 let peekOn=false;
@@ -1544,7 +1555,7 @@ function settleJackpot(g,vals,winIdx,W){
   const pot=Math.round(((pr?(g.jp||0):0)+a*n)*100)/100;
   let L=-1;vals.forEach((v,i)=>{if(!v||winIdx.includes(i))return;if(L<0||cmp(v,vals[L])>0)L=i});
   const hit=L>=0&&qualifies(vals[L]);
-  const add=(i,x)=>{const nm=g.who[i];const r=(W[nm]||[0,0,0,0]).slice();while(r.length<4)r.push(0);r[3]=Math.round((r[3]+x)*100)/100;W[nm]=r};
+  const add=(i,x)=>{const nm=g.who[i];const r=(W[nm]||[0,0,0,0,0]).slice();while(r.length<5)r.push(0);r[3]=Math.round((r[3]+x)*100)/100;r[4]=Math.round((r[4]+x)*100)/100;W[nm]=r};
   if(!hit){if(pr)g.who.forEach((_,i)=>add(i,-a));return{jp:pr?pot:0,hit:null}}
   const pay=g.who.map(()=>0);pay[L]=pot;
   g.who.forEach((_,i)=>add(i,Math.round((pay[i]-a)*100)/100));
