@@ -508,6 +508,15 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 
 .ms.moving{opacity:.9}.ms.moving b,.ms.moving i{background:rgba(239,195,90,.12);border:1px dashed rgba(239,195,90,.6)}.ms.moving b{margin:0;border-bottom:0;padding-top:5px;color:var(--gold)}.ms.moving i{border-top:0;color:var(--gold)}
 
+/* cards revealed after the hand */
+.c.late{opacity:.8;filter:saturate(.75);outline:2px dashed rgba(140,185,255,.9);outline-offset:-2px}
+.c.lateflip{animation:lateflip .55s cubic-bezier(.2,.7,.25,1.1) both;animation-delay:var(--d,0s)}
+@keyframes lateflip{0%{transform:perspective(500px) rotateY(180deg);opacity:0}60%{transform:perspective(500px) rotateY(-10deg);opacity:.9}100%{transform:none;opacity:.8}}
+.latenote{display:flex;align-items:center;gap:6px;font-size:12px;color:#a9c4ff;margin-top:6px}
+.latenote i{flex:none;width:12px;height:12px;border-radius:3px;outline:2px dashed rgba(140,185,255,.9);outline-offset:-2px}
+.latenote b{color:#dbe6ff}
+@media (prefers-reduced-motion:reduce){.c.lateflip{animation:none}}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -874,7 +883,7 @@ function asideFor(g,i){const n=g.h[i].length;const ok=o=>Array.isArray(o)&&o.len
   if(!room)return soloAside.e===g.e&&soloAside.s[i]?soloAside.s[i]:[];const pp=g.pp&&g.pp[i];if(!pp)return[];
   if(pp===myPeer)return myAside.e===g.e?myAside.l:[];const p=peers.find(x=>x.peer===pp);const a=p&&p.presence&&p.presence.as;return a&&a.e===g.e&&ok(a.l)?a.l:[]}
 function toggleAside(i,j){const cur=asideFor(G,i);const l=cur.includes(j)?cur.filter(x=>x!==j):[...cur,j];if(!room){if(soloAside.e!==G.e)soloAside={e:G.e,s:{}};soloAside.s[i]=l}else{myAside={e:G.e,l};room.presence({as:myAside}).catch(()=>{})}if(G)drawFlip(G)}
-let myFlips={e:0,o:[]},soloFl={e:0,s:{}},FD=null,visible=new Set(),peeling=new Map(),peelT=null,botT=null,manualKeys=new Set();
+let lateSeen=new Set(),lateN=0;let myFlips={e:0,o:[]},soloFl={e:0,s:{}},FD=null,visible=new Set(),peeling=new Map(),peelT=null,botT=null,manualKeys=new Set();
 const validO=(o,n)=>Array.isArray(o)&&o.length<=n&&o.every(x=>Number.isInteger(x)&&x>=0&&x<n)&&new Set(o).size===o.length;
 function flipsFor(g,i){
   const n=g.h[i].length;const af=g.af&&g.af[i];
@@ -1089,6 +1098,7 @@ function drawFlip(g){
   else if(done){const w=D.leaders;$('sweat').textContent=(w.length>1?'Chop: ':'')+w.map(x=>g.who[x]).join(' & ')+(w.length>1?' — ':' wins — ')+describe(D.lv)}
   else if(D.turn!==-1){const t=D.turn;$('sweat').textContent=t===sbI&&!D.seats[t].shown.length?`${g.who[t]} (SB) flips the first card`:D.bar?`${g.who[t]} to flip · needs to beat ${describe(D.bar)}`:`${g.who[t]} flips to make a hand`}
   else $('sweat').textContent=leftTotal?(g.fo===1?`Everyone peels and flips freely · ${leftTotal} card${leftTotal===1?'':'s'} left`:`Sweat the rest · ${leftTotal} card${leftTotal===1?'':'s'} left`):'…';
+  lateN=0;if(lateSeen.size>600)lateSeen.clear();
   $('seats').innerHTML=order.map((i,k)=>{
     const S=D.seats[i],F=full.seats[i];
     const canMe=canAct(i)&&mayFlip(i);const peekMe=g.lk===1&&peekOn&&(room?g.pp&&g.pp[i]===myPeer:i===0)&&!done;
@@ -1100,6 +1110,8 @@ function drawFlip(g){
     const cards=ordIdx.map(j=>{const t=g.h[i][j];
       const x=P(t),key=g.e+':'+i+':'+j;
       if(F.shown.includes(j)){const pl=peeling.has(key)&&!manualKeys.has(key);return cardH(x,(pl?'flip3d ':'')+(S.used.includes(j)&&!peeling.has(key)?'used':''),pl?1.6:0)}
+      /* hand over: cards nobody flipped are shown face up, marked as revealed after the hand */
+      if(done&&g.m==='f'){let an='';if(!lateSeen.has(key)){lateSeen.add(key);an=` lateflip" style="--d:${(0.35+lateN++*0.09).toFixed(2)}s`}return cardH(x,'late'+an)}
       const red=x.s==='h'||x.s==='d';const face=`<span>${rn(x.r)}</span><span class="s">${SY[x.s]}</span>`;
       if(canMe&&!peekMe)return`<button class="c back tap ${asd.includes(j)?'aside':''}" data-sq="1" data-s="${i}" data-j="${j}" aria-label="Squeeze card ${j+1}"></button>`;
       if(!peekMe&&canPeek(i,j))return`<button class="c back pk ${asd.includes(j)?'aside':''}" data-sq="1" data-s="${i}" data-j="${j}" aria-label="Peek at card ${j+1}"></button>`;
@@ -1112,8 +1124,9 @@ function drawFlip(g){
     if(!done&&D.turn===i&&D.bar)res=(res?res+' · ':'')+'needs to beat '+describe(D.bar);
     const mySeat=(room?g.pp&&g.pp[i]===myPeer:i===0)&&!done;const peekBtn=g.lk===1&&mySeat&&F.left?`<button class="ghost flipbtn" id="peekb">${peekOn?'Hide my cards':'Look at my hand'}</button>`:'';
     const hint=(canMe?`<div class="hint">${i===sbI&&!S.shown.length&&g.fo!==1?'You are the SB: squeeze or flip one card to start':'Tap a card to squeeze it'}</div>`:(mySeat&&F.left&&g.m==='f'?'<div class="hint">Tap your cards to peek privately · set aside the ones you want to slam</div>':''))+(peekMe?'<div class="hint">Only you can see your face-down cards</div>':'')+peekBtn;
+    let lateNote='';if(done&&g.m==='f'&&F.shown.length<g.h[i].length){const all=handVal(g,i,g.h[i].map((_,j)=>j),g.b.map(P));lateNote=`<div class="latenote"><i></i>Not flipped, shown after the hand${all&&(!S.v||describe(all.v)!==describe(S.v))?` · all ${g.h[i].length}: <b>${esc(describe(all.v))}</b>`:''}</div>`}
     const stuck=mine&&!done&&!canAct(i)&&g.pp&&g.pp[i]&&mayFlip(i);
-    return`<div class="seat ${cls}" data-i="${i}"><div class="top"><span class="nm">${k===0?'<span class="tag">SB</span>':''}${esc(g.who[i]||'Player')}</span>${rxs}<span class="eq">${st}</span></div><div class="hand ${g.h[i].length>6?'many':''}">${cards}</div><div class="res">${esc(res)}</div>${hint}${stuck?`<button class="ghost flipbtn" data-for="${i}">Flip for ${esc(g.who[i])}</button>`:''}</div>`;
+    return`<div class="seat ${cls}" data-i="${i}"><div class="top"><span class="nm">${k===0?'<span class="tag">SB</span>':''}${esc(g.who[i]||'Player')}</span>${rxs}<span class="eq">${st}</span></div><div class="hand ${g.h[i].length>6?'many':''}">${cards}</div><div class="res">${esc(res)}</div>${lateNote}${hint}${stuck?`<button class="ghost flipbtn" data-for="${i}">Flip for ${esc(g.who[i])}</button>`:''}</div>`;
   }).join('');
   if(dealAnimE===g.e&&dealShownE!==g.e){dealShownE=g.e;$('seats').querySelectorAll('.seat').forEach((st,si)=>st.querySelectorAll('.hand .c').forEach((c,ci)=>{c.classList.add('dealin');c.style.animationDelay=(si*.06+ci*.05)+'s'}))}
   /* your turn, beats, wins */
