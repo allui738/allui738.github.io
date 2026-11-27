@@ -1856,9 +1856,12 @@ function adoptHostConn(c,g){
   if(!room)goLive();else refresh();
 }
 /* first join: the table may have moved to a newer host, so look a few generations ahead */
+let joinTok=0,joinStart=0;
 function joinScan(from,to,first){
-  let g=from;
-  const next=()=>{if(g>to){if(first&&(first==='reopen'||store.get('of-sess-'+code,null))){lerr('Reopening table '+code+'…');becomeHost(0,true,true);return}if(first)lerr('No table found with code '+code+'. Check the code with whoever started it.');else{setConn('Reconnecting…');clearTimeout(retryT);retryT=setTimeout(()=>joinScan(gen,gen+2),2500)}return}
+  let g=from;const myTok=joinTok;
+  const next=()=>{if(g>to){if(first&&(first==='reopen'||store.get('of-sess-'+code,null))){lerr('Reopening table '+code+'…');becomeHost(0,true,true);return}if(first){/* the host's phone may be asleep or in another app for a moment: keep looking for a while before giving up */
+      if(!room&&joinTok===myTok&&Date.now()-joinStart<120000){lerr('Looking for table '+code+'… The host needs Omaha Flips open on their screen.');setTimeout(()=>{if(!room&&joinTok===myTok)joinScan(0,6,true)},1500)}
+      else if(!room&&joinTok===myTok)lerr('No table found with code '+code+'. Make sure the host has Omaha Flips open, then tap Join again.')}else{setConn('Reconnecting…');clearTimeout(retryT);retryT=setTimeout(()=>joinScan(gen,gen+2),2500)}return}
     const cur=g++;tryHost(cur,first?3500:2500,c=>adoptHostConn(c,cur),next)};
   next();
 }
@@ -1875,7 +1878,7 @@ function hostLost(){
 setInterval(()=>{if(!isHost||!hadClients||conns.size||!peer)return;tryHost(gen+1,2500,c=>{try{hostPeer&&hostPeer.destroy()}catch(e){}hostPeer=null;isHost=false;adoptHostConn(c,gen+1);flash('Rejoined the table')},()=>{})},5000);
 const sheetShown=new Set();
 function startTable(){code=newCode();lerr('Opening a table…');lastList=[];makeIdentity(()=>becomeHost(0,true))}
-function joinTable(c){code=c.toUpperCase();lerr('Connecting to table '+code+'…');const go=()=>joinScan(0,6,true);if(peer&&myId)go();else makeIdentity(go)}
+function joinTable(c){joinTok++;joinStart=Date.now();code=c.toUpperCase();lerr('Connecting to table '+code+'…');const go=()=>joinScan(0,6,true);if(peer&&myId)go();else makeIdentity(go)}
 function inviteLink(){return location.href.split('#')[0]+'#'+code}
 function openSheet(){$('scode').textContent=code;$('slink').textContent=inviteLink();$('sheet').classList.remove('hide')}
 $('inv').addEventListener('click',openSheet);
@@ -1936,6 +1939,10 @@ function leaveVoice(){if(vStream)vStream.getTracks().forEach(t=>t.stop());vStrea
 $('vc').addEventListener('click',()=>{if(vStream)leaveVoice();else joinVoice()});
 $('mute').addEventListener('click',()=>{if(!vStream)return;const t=vStream.getAudioTracks()[0];t.enabled=!t.enabled;vcBtns()});
 peersHandlers.push(()=>{syncCalls();vcBtns()});
+
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;
+  try{if(peer&&!peer.destroyed&&peer.disconnected)peer.reconnect()}catch(e){}
+  try{if(hostPeer&&!hostPeer.destroyed&&hostPeer.disconnected)hostPeer.reconnect()}catch(e){}});
 }
 </script>
 </body>
