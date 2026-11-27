@@ -1836,7 +1836,7 @@ function addAvatars(){orderPanels();
 (function(){
 const RealPeer=window.Peer;window.RealPeer=RealPeer;
 const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
-const ROOT='omahaflips/v3/',VPFX='ofv3-';
+const ROOT='omahaflips/v3/',VPFX='ofv3-',TURN='https://omahaflips.alloyd709.workers.dev/turn';
 const enc=new TextEncoder(),dec=new TextDecoder();
 const rnd=n=>{let s='';const a='abcdefghijkmnpqrstuvwxyz23456789';for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s};
 
@@ -1925,8 +1925,12 @@ class RelayPeer{
   reconnect(){if(!ready){clearTimeout(retryT);open()}}
   destroy(){if(this.destroyed)return;this.destroyed=true;this.open=false;for(const c of [...this.conns.values()])c.close();unsub(this.id);clearInterval(this._hb);try{this._v&&this._v.destroy()}catch(e){}}
   /* voice chat rides on PeerJS calls, under a matching id */
-  _voice(){if(this._v||typeof RealPeer!=='function'||this.id.startsWith('omahaflip'))return;
-    try{const v=new RealPeer(VPFX+this.id);this._v=v;
+  async _voice(){if(this._v||this._vp||typeof RealPeer!=='function'||this.id.startsWith('omahaflip'))return;this._vp=1;
+    let ice=[{urls:'stun:stun.l.google.com:19302'}];
+    try{const ac=new AbortController();setTimeout(()=>ac.abort(),5000);
+      const j=await (await fetch(TURN,{signal:ac.signal})).json();if(j.iceServers&&j.iceServers.length)ice=j.iceServers.concat(ice)}catch(e){}
+    if(this.destroyed)return;
+    try{const v=new RealPeer(VPFX+this.id,{config:{iceServers:ice}});this._v=v;
       v.on('call',c=>{c._of=c.peer.slice(VPFX.length);this._emit('call',c)});
       v.on('disconnected',()=>{setTimeout(()=>{try{if(!v.destroyed&&v.disconnected)v.reconnect()}catch(e){}},800)});
       v.on('error',()=>{})}catch(e){}}
