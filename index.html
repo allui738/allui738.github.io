@@ -525,6 +525,19 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .stats td,.stats th{padding-left:4px;padding-right:4px}
 .stnote{font-size:11px;color:var(--muted);margin:8px 2px 0}
 
+.mitem.mleave.red{color:#ff9aa2!important}.mitem.mleave{color:var(--gold)!important;border-top:1px solid var(--line)!important;border-radius:0 0 11px 11px!important;margin-top:4px}
+
+.howto{margin:16px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:18px}
+.howto summary{list-style:none;cursor:pointer;min-height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font:700 13px Inter,sans-serif;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg) translateY(-3px);transition:transform .2s}
+.howto[open] summary::after{transform:rotate(-135deg) translateY(-2px)}
+.hbody{padding:0 16px 14px}
+.hbody h4{font:700 14px Inter,sans-serif;color:var(--gold);margin:12px 0 4px}
+.hbody p{font-size:13.5px;line-height:1.55;color:rgba(246,242,231,.82);margin:0}
+.hbody b{color:var(--ink)}
+.copy{text-align:center;font-size:11.5px;color:var(--muted);opacity:.7;margin:18px 0 4px;letter-spacing:.3px}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -557,7 +570,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
   <button class="alt wide" id="bclose">DONE</button>
 </div></div>
 <div class="wrap">
-  <div class="head appbar"><div class="brand"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe38f"/><stop offset=".5" stop-color="#efc35a"/><stop offset="1" stop-color="#b9811f"/></linearGradient><radialGradient id="lg2" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#25a05f"/><stop offset="1" stop-color="#083a21"/></radialGradient></defs><circle cx="32" cy="32" r="30" fill="url(#lg2)" stroke="url(#lg1)" stroke-width="3"/><circle cx="32" cy="32" r="24.5" fill="none" stroke="#efc35a" stroke-opacity=".35" stroke-dasharray="3 4"/><g transform="translate(32 33) rotate(-12)"><rect x="-15" y="-19" width="22" height="31" rx="3.5" fill="#a8213a" stroke="#fff" stroke-width="2"/></g><g transform="translate(32 33) rotate(10)"><rect x="-7" y="-19" width="22" height="31" rx="3.5" fill="#fffdf8" stroke="#d9d2c0" stroke-width="1"/><path d="M4 -10 C4 -10 -3 -3 -3 1.5 C-3 4.5 0 6 2.5 4.3 L1.5 8 L6.5 8 L5.5 4.3 C8 6 11 4.5 11 1.5 C11 -3 4 -10 4 -10Z" fill="#15171b"/></g></svg><h1>Omaha Flips</h1></div><div class="hr"><span class="conn" id="conn">Solo mode</span><button class="ghost hide" id="inv">Invite</button><details class="menu" id="menu"><summary>Menu</summary><div class="pop"><button class="mitem" id="mset">Settings</button><button class="mitem" id="mhist">Hand history</button><button class="mitem" id="msettle">Settle up</button></div></details></div></div>
+  <div class="head appbar"><div class="brand"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe38f"/><stop offset=".5" stop-color="#efc35a"/><stop offset="1" stop-color="#b9811f"/></linearGradient><radialGradient id="lg2" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#25a05f"/><stop offset="1" stop-color="#083a21"/></radialGradient></defs><circle cx="32" cy="32" r="30" fill="url(#lg2)" stroke="url(#lg1)" stroke-width="3"/><circle cx="32" cy="32" r="24.5" fill="none" stroke="#efc35a" stroke-opacity=".35" stroke-dasharray="3 4"/><g transform="translate(32 33) rotate(-12)"><rect x="-15" y="-19" width="22" height="31" rx="3.5" fill="#a8213a" stroke="#fff" stroke-width="2"/></g><g transform="translate(32 33) rotate(10)"><rect x="-7" y="-19" width="22" height="31" rx="3.5" fill="#fffdf8" stroke="#d9d2c0" stroke-width="1"/><path d="M4 -10 C4 -10 -3 -3 -3 1.5 C-3 4.5 0 6 2.5 4.3 L1.5 8 L6.5 8 L5.5 4.3 C8 6 11 4.5 11 1.5 C11 -3 4 -10 4 -10Z" fill="#15171b"/></g></svg><h1>Omaha Flips</h1></div><div class="hr"><span class="conn" id="conn">Solo mode</span><button class="ghost hide" id="inv">Invite</button><details class="menu" id="menu"><summary>Menu</summary><div class="pop"><button class="mitem" id="mset">Settings</button><button class="mitem" id="mhist">Hand history</button><button class="mitem" id="msettle">Settle up</button><button class="mitem mleave" id="mleave">Leave table</button></div></details></div></div>
   <div class="set">
     <input id="me" maxlength="14" placeholder="Your name" aria-label="Your name">
     <button class="ghost" id="sit">Sit in</button>
@@ -581,7 +594,23 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
   </div>
   <div class="seats" id="seats"></div>
   <section class="stats"><h2>Standings <span class="jkpill hide" id="jkpill"></span></h2><div id="tally"><p class="empty">No hands finished yet.</p></div></section>
-  <p class="note">Everyone at your table sees the same hand live. Tap Invite to bring friends in. The phone that started the table hosts it, so keep it open. Standings follow each hand to the next dealer and are saved on your phone. Sit in to get dealt. If fewer people are seated than "Bots fill to", bots take the empty seats, so you can test alone. Whoever presses Deal is the dealer for that hand and controls the run-out. Hands use exactly 2 hole cards plus 3 from the board unless you set Hands to Any cards (best 5 from your flipped cards plus the board; Sweat flips only). The gold-raised cards are the ones playing. Equity is live: exact on the flop and turn, simulated preflop.</p>
+  <details class="howto" id="howto"><summary>How to play</summary>
+    <div class="hbody">
+      <h4>Get a table going</h4>
+      <p>Tap <b>Start a table</b>, then <b>Invite</b> and send the link. Friends open it, type their name and they're in. Tap an empty seat to sit or move seats. Bots fill any empty seats up to the "Bots fill to" setting, so you can practice alone.</p>
+      <h4>Sweat flips</h4>
+      <p>The board runs out first. The small blind flips one card, which plays with the board. Then each player flips until they beat the best hand so far, going round the table (back to the SB too). Run out of cards without beating it and you're out. The last hand standing wins, and cards nobody flipped are shown at the end with a dashed outline. Prefer no order? Set <b>Flip order</b> to free peeling.</p>
+      <h4>Peeling</h4>
+      <p>Tap your card to squeeze it. Drag any edge or corner to peel, press and hold near the middle to tear out a dot, or turn it sideways. <b>Set aside</b> saves a card for later and <b>Slam it</b> throws it down when you think you've got the nuts.</p>
+      <h4>Hands</h4>
+      <p>Omaha rules: exactly 2 of your cards plus 3 from the board, unless Hands is set to Any cards. Gold-raised cards are the ones playing.</p>
+      <h4>Money and the jackpot</h4>
+      <p>Set a wager per hand and an optional bad beat jackpot (progressive keeps growing until it hits). Standings show what you're up or down on flips and on the jackpot separately, and <b>Menu → Settle up</b> works out who pays whom.</p>
+      <h4>If someone drops</h4>
+      <p>The table keeps going. Another phone takes over hosting, and if the dealer leaves mid-hand anyone can tap <b>Take over this hand</b>. Leaving the app and coming back puts you right back in your seat. Standings are saved on your phone.</p>
+    </div>
+  </details>
+  <footer class="copy">© November 2026 Omaha Flips. All rights reserved.</footer>
 </div>
 <div class="sqz hide" id="sqz"><div class="sqbox"><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row"><button class="alt" id="sqrot">TURN SIDEWAYS</button></div><div class="row"><button class="alt" id="sqaside">SET ASIDE</button><button class="alt slamb" id="sqslam">SLAM IT<small>think you&rsquo;ve got the nuts?</small></button></div><div class="row"><button class="alt" id="sqclose">PUT IT BACK</button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
 <div class="spy hide" id="spy"><p class="sqlab" id="spylab"></p><div class="big sm" id="spybig"></div></div>
@@ -978,8 +1007,18 @@ function nextMine(){
 }
 /* ---------- sounds: synthesized on the phone, nothing to download ---------- */
 let AC=null;
-function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});return AC}
-document.addEventListener('pointerdown',()=>{if(prefs&&prefs.snd)ac()},{passive:true});
+/* iPhone pauses web audio whenever the page loses focus, a call comes in or the screen locks.
+   Wake it on every touch and whenever the page comes back, and rebuild it if Safari closed it. */
+function ac(){
+  if(AC&&AC.state==='closed')AC=null;
+  if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
+  if(AC&&AC.state!=='running')AC.resume().catch(()=>{});return AC}
+let unlocked=false;
+function unlock(){if(!prefs||!prefs.snd)return;const a=ac();if(!a)return;
+  if(!unlocked||a.state!=='running'){try{const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0);unlocked=true}catch(e){}}}
+['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true,capture:true}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')AC.resume().catch(()=>{})});
+window.addEventListener('pageshow',()=>{if(AC&&AC.state!=='running')AC.resume().catch(()=>{})});
 let VOL=(()=>{const v=store.get('of-vol2',.25);return typeof v==='number'&&v>=0&&v<=1?v:.25})();
 function tone(f,t0,d,type='sine',v=.2,f2){const a=ac();if(!a)return;v*=VOL;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime+t0);if(f2)o.frequency.exponentialRampToValueAtTime(f2,a.currentTime+t0+d);g.gain.setValueAtTime(0.0001,a.currentTime+t0);g.gain.exponentialRampToValueAtTime(v,a.currentTime+t0+.01);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+t0+d);o.connect(g);g.connect(a.destination);o.start(a.currentTime+t0);o.stop(a.currentTime+t0+d+.05)}
 function noise(t0,d,v=.3,lo=800,hi=6000){const a=ac();if(!a)return;v*=VOL;const n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.2);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=Math.sqrt(lo*hi);f.Q.value=.7;const g=a.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(a.destination);s.start(a.currentTime+t0)}
@@ -1586,6 +1625,13 @@ $('mset').addEventListener('click',()=>openModal('setm'));
 $('mhist').addEventListener('click',()=>{renderHist();openModal('histm')});
 $('shist').addEventListener('click',()=>{closeModal($('setm'));renderHist();openModal('histm')});
 $('msettle').addEventListener('click',()=>{renderSettle();openModal('setlm')});
+/* back to the start screen: start a real table, join a friend's, or practice again */
+function leaveLabel(){$('mleave').textContent=room?'Leave table':'Play with friends';$('mleave').classList.toggle('red',!!room)}
+$('menu').addEventListener('toggle',leaveLabel);
+$('mleave').addEventListener('click',()=>{const b=$('mleave');
+  if(room&&!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again to leave';setTimeout(()=>{delete b.dataset.arm;leaveLabel()},3000);return}
+  try{if(room&&window.OF_TABLE)store.set('of-sess-'+window.OF_TABLE,null)}catch(e){}
+  location.href=location.pathname});
 $('ssettle').addEventListener('click',()=>{closeModal($('setm'));renderSettle();openModal('setlm')});
 function vibe(p){if(prefs.vib)try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 /* ---------- settle up: fewest payments that zero everyone's net ---------- */
@@ -1700,7 +1746,7 @@ function makeIdentity(cb,tries=0){
   const saved=store.get('of-id-'+code,null);
   const p=(saved&&tries<4)?new Peer(saved):new Peer();
   let ok=false;
-  p.on('open',id=>{ok=true;peer=p;myId=id;store.set('of-id-'+code,id);hookCalls(p);cb()});
+  p.on('open',id=>{if(ok)return;ok=true;peer=p;myId=id;store.set('of-id-'+code,id);hookCalls(p);cb()});
   p.on('error',e=>{
     if(!ok&&e&&e.type==='unavailable-id'){try{p.destroy()}catch(_){}setTimeout(()=>makeIdentity(cb,tries+1),1500);return}
     if(e&&e.type==='peer-unavailable'&&connecting){const c=connecting;connecting=null;c.fail()}
@@ -1714,19 +1760,20 @@ function hostHandlers(hp){
     const gone=()=>{if(conns.get(c.peer)!==c)return;conns.delete(c.peer);presMap.delete(c.peer);broadcast()};c.on('close',gone);c.on('error',gone);
   });
 }
-function becomeHost(g,initial){
+let reopenTries=0;
+function becomeHost(g,initial,reopen){
   const hp=new Peer(hostIdFor(g));let ok=false;
   const oldOwner=hostOwner;
-  hp.on('open',()=>{ok=true;hostPeer=hp;isHost=true;gen=g;hostOwner=myId;hostConn=null;conns=new Map();
+  hp.on('open',()=>{if(ok)return;ok=true;hostPeer=hp;isHost=true;gen=g;hostOwner=myId;hostConn=null;conns=new Map();
     presMap=new Map();for(const x of lastList)if(x&&x.id&&x.id!==myId&&x.id!==oldOwner)presMap.set(x.id,x.p||{});presMap.set(myId,{...roomMine});
     /* players who do not reconnect to the new host within a few seconds are dropped */
     setTimeout(()=>{for(const id of [...presMap.keys()])if(id!==myId&&!conns.has(id))presMap.delete(id);broadcast()},9000);
     broadcast();
-    if(initial){goLive();openSheet()}else{flash('The host dropped. Your phone is hosting the table now.')}
+    if(initial){goLive();if(!reopen&&!sheetShown.has(code)){sheetShown.add(code);openSheet()}}else{flash('The host dropped. Your phone is hosting the table now.')}
   });
   hostHandlers(hp);
-  hp.on('error',e=>{if(!ok&&e&&e.type==='unavailable-id'){try{hp.destroy()}catch(_){}if(initial){code=newCode();becomeHost(0,true)}else joinScan(g,g+1)}});
-  hp.on('disconnected',()=>{try{hp.reconnect()}catch(e){}});
+  hp.on('error',e=>{if(!ok&&e&&e.type==='unavailable-id'){try{hp.destroy()}catch(_){}if(reopen){if(reopenTries++<10)setTimeout(()=>{if(!room)joinScan(0,3,'reopen')},3000);else lerr('Could not reopen table '+code+'. Start a new one.')}else if(initial&&!room){code=newCode();becomeHost(0,true)}else if(initial&&room){setTimeout(()=>{if(!isHost&&!hostConn)becomeHost(g,false)},3000)}else joinScan(g,g+1)}});
+  hp.on('disconnected',()=>{setTimeout(()=>{try{if(!hp.destroyed&&hp.disconnected)hp.reconnect()}catch(e){}},500)});
 }
 /* try to reach the host at generation g; resolves via callbacks */
 function tryHost(g,ms,onOk,onFail){
@@ -1747,7 +1794,7 @@ function adoptHostConn(c,g){
 /* first join: the table may have moved to a newer host, so look a few generations ahead */
 function joinScan(from,to,first){
   let g=from;
-  const next=()=>{if(g>to){if(first)lerr('No table found with code '+code+'. Check the code with whoever started it.');else{setConn('Reconnecting…');clearTimeout(retryT);retryT=setTimeout(()=>joinScan(gen,gen+2),2500)}return}
+  const next=()=>{if(g>to){if(first&&(first==='reopen'||store.get('of-sess-'+code,null))){lerr('Reopening table '+code+'…');becomeHost(0,true,true);return}if(first)lerr('No table found with code '+code+'. Check the code with whoever started it.');else{setConn('Reconnecting…');clearTimeout(retryT);retryT=setTimeout(()=>joinScan(gen,gen+2),2500)}return}
     const cur=g++;tryHost(cur,first?3500:2500,c=>adoptHostConn(c,cur),next)};
   next();
 }
@@ -1762,6 +1809,7 @@ function hostLost(){
 }
 /* a host that slept and woke up alone rejoins the table under the newer host */
 setInterval(()=>{if(!isHost||!hadClients||conns.size||!peer)return;tryHost(gen+1,2500,c=>{try{hostPeer&&hostPeer.destroy()}catch(e){}hostPeer=null;isHost=false;adoptHostConn(c,gen+1);flash('Rejoined the table')},()=>{})},5000);
+const sheetShown=new Set();
 function startTable(){code=newCode();lerr('Opening a table…');lastList=[];makeIdentity(()=>becomeHost(0,true))}
 function joinTable(c){code=c.toUpperCase();lerr('Connecting to table '+code+'…');const go=()=>joinScan(0,6,true);if(peer&&myId)go();else makeIdentity(go)}
 function inviteLink(){return location.href.split('#')[0]+'#'+code}
