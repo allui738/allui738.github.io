@@ -1060,7 +1060,9 @@ function ac(){
   if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
   if(AC&&AC.state!=='running')AC.resume().catch(()=>{});return AC}
 let unlocked=false;
-function unlock(){if(!prefs||!prefs.snd)return;const a=ac();if(!a)return;
+function unlock(e){if(!prefs||!prefs.snd)return;
+  /* never touch audio on taps that share or open another app: on iPhone that can use up the tap, and Safari then blocks the share menu or the Messages link */
+  try{if(e&&e.target&&e.target.closest&&e.target.closest('#sheet,.noaudio'))return}catch(_){}const a=ac();if(!a)return;
   if(!unlocked||a.state!=='running'){try{const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0);unlocked=true}catch(e){}}}
 ['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true,capture:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')AC.resume().catch(()=>{})});
@@ -1880,7 +1882,7 @@ const sheetShown=new Set();
 function startTable(){code=newCode();lerr('Opening a table…');lastList=[];makeIdentity(()=>becomeHost(0,true))}
 function joinTable(c){joinTok++;joinStart=Date.now();code=c.toUpperCase();lerr('Connecting to table '+code+'…');const go=()=>joinScan(0,6,true);if(peer&&myId)go();else makeIdentity(go)}
 function inviteLink(){return location.href.split('#')[0]+'#'+code}
-function openSheet(){$('scode').textContent=code;$('slink').textContent=inviteLink();$('sheet').classList.remove('hide')}
+function openSheet(){$('scode').textContent=code;$('slink').textContent=inviteLink();try{$('bsms').href=smsHref()}catch(e){}$('sheet').classList.remove('hide')}
 $('inv').addEventListener('click',openSheet);
 $('bclose').addEventListener('click',()=>$('sheet').classList.add('hide'));
 function inviteText(){return `Join my Omaha Flips table (code ${code}): ${inviteLink()}`}
@@ -1896,7 +1898,8 @@ $('bshare').addEventListener('click',()=>{const url=inviteLink();
   if(navigator.share){navigator.share({title:'Omaha Flips',text:`Join my Omaha Flips table (code ${code})`,url}).catch(e=>{if(!e||e.name!=='AbortError')doCopy()})}
   else doCopy()});
 $('bcopy').addEventListener('click',doCopy);
-$('bsms').addEventListener('click',e=>{e.preventDefault();const body=encodeURIComponent(inviteText());location.href=(/iPhone|iPad|iPod|Mac/.test(navigator.userAgent)?'sms:&body=':'sms:?body=')+body});
+/* Text it is a real link to Messages (set when the sheet opens), so the phone opens it natively */
+function smsHref(){return(/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)?'sms:&body=':'sms:?body=')+encodeURIComponent(inviteText())}
 $('slink').addEventListener('click',doCopy);
 function needName(){const n=$('lname').value.trim().slice(0,14);if(!n){lerr('Type your name first');$('lname').focus();return null}myName=n;store.set('of-name',n);$('me').value=n;return n}
 $('lname').value=myName;
