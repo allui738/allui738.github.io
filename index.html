@@ -939,7 +939,7 @@ function joinWatch(){if(!room)return;const cl=seatClaims().filter(Boolean);const
 function showJoin(names,bots){const el=$('jpop');if(!el)return;
   const nm=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];const one=names.length===1;
   el.innerHTML=bots
-    ?`<p><b>${esc(nm)}</b> sat down</p><small>Bots never play with real players.</small><div class="jrow"><button class="jgo" data-j="deal">End hand · play with ${one?esc(names[0]):'them'}</button></div>`
+    ?`<p><b>${esc(nm)}</b> sat down</p><div class="jrow" style="margin-top:10px"><button class="jgo" data-j="deal">End hand · play with ${one?esc(names[0]):'them'}</button></div>`
     :`<p><b>${esc(nm)}</b> sat down</p><small>${one?'They':'They'}'ll be dealt in next hand. Or start fresh: reset standings and deal a new hand now.</small><div class="jrow"><button class="jno" data-j="keep">Keep going</button><button class="jgo" data-j="fresh">Start fresh</button></div>`;
   el.classList.remove('hide');try{sfx('ping')}catch(e){}
   if(bots){clearTimeout(botT);botT=null;clearTimeout(autoNextT);autoNextT=null}}
