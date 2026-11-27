@@ -643,7 +643,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
   <details class="howto" id="howto"><summary>How to play</summary>
     <div class="hbody">
       <h4>Get a table going</h4>
-      <p>Tap <b>Start a table</b>, then <b>Invite</b> and send the link. Friends open it, type their name and they're in. Tap an empty seat to sit or move seats. Bots fill any empty seats up to the "Bots fill to" setting, so you can practice alone.</p>
+      <p>Tap <b>Start a table</b>, then <b>Invite</b> and send the link. Friends open it, type their name and they're in. Tap an empty seat to sit or move seats. Bots fill any empty seats up to the Bots setting, so you can practice alone.</p>
       <h4>Sweat flips</h4>
       <p>The board runs out first. The small blind flips one card, which plays with the board. Then each player flips until they beat the best hand so far, going round the table (back to the SB too). Run out of cards without beating it and you're out. The last hand standing wins, and cards nobody flipped are shown at the end with a dashed outline. Prefer no order? Set <b>Flip order</b> to free peeling.</p>
       <h4>Peeling</h4>
@@ -768,7 +768,7 @@ $('me').value=myName;$('nc').value=String(store.get('of-nc',5));$('md').value=st
 
 function maxPlayers(){return Math.min(9,Math.floor(47/ +$('nc').value))}
 const npKey=()=>room?'of-fill':'of-np';
-function fillNp(){const m=maxPlayers();let v=Math.min(+store.get(npKey(),room?0:4),m);if(!room&&v<2)v=2;const opts=Array.from({length:m-1},(_,i)=>i+2);if(room)opts.unshift(0);$('np').innerHTML=opts.map(n=>`<option value="${n}" ${n==v?'selected':''}>${n===0?'No bots':n}</option>`).join('')}
+function fillNp(){const m=maxPlayers();let v=Math.min(+store.get(npKey(),room?0:4),m);if(!room&&v<2)v=2;const opts=Array.from({length:m-1},(_,i)=>i+2);if(room)opts.unshift(0);$('np').innerHTML=opts.map(n=>`<option value="${n}" ${n==v?'selected':''}>${n===0?'No bots':room?`Fill to ${n} players (you + bots)`:`${n} players`}</option>`).join('')}
 fillNp();
 
 function validG(g){return g&&typeof g==='object'&&typeof g.e==='number'&&(g.m===undefined||g.m==='f'||g.m==='u')&&(g.sb===undefined||(Number.isInteger(g.sb)&&g.sb>=0&&g.sb<9))&&(g.jp===undefined||(typeof g.jp==='number'&&g.jp>=0&&g.jp<1e7))&&(g.jka===undefined||(typeof g.jka==='number'&&g.jka>=0&&g.jka<=10000))&&(g.fb===undefined||(Array.isArray(g.fb)&&g.fb.length===5&&g.fb.every(ok)))&&(g.wg===undefined||(typeof g.wg==='number'&&g.wg>=0&&g.wg<=100000))&&(g.ss===undefined||(Array.isArray(g.ss)&&g.ss.length===g.h.length&&g.ss.every(x=>Number.isInteger(x)&&x>=0&&x<9)))&&(g.btn===undefined||(Number.isInteger(g.btn)&&g.btn>=0&&g.btn<9))&&[1,2,3,4].includes(g.n)&&typeof g.dl==='string'&&Array.isArray(g.h)&&g.h.length>=2&&g.h.length<=9&&g.h.every(h=>Array.isArray(h)&&h.length>=4&&h.length<=10&&h.every(ok))&&Array.isArray(g.b)&&g.b.length<=5&&g.b.every(ok)&&Array.isArray(g.who)&&new Set([...g.h.flat(),...g.b]).size===g.h.flat().length+g.b.length}
@@ -874,7 +874,7 @@ function refresh(){
   const iDeal=!!mine;
   const s=seatedNames();
   $('conn').innerHTML=room?`Table <b>${esc(code)}</b> · <b>${peers.length}</b> here · <b>${s?s.length:0}</b> seated`:'Solo practice';
-  $('npt').textContent=room?'Bots fill to':'Players';
+  $('npt').textContent=room?'Bots':'Players';
   $('sit').classList.toggle('hide',!room);
   $('sit').textContent=seated?'Sitting in':'Sit in';$('sit').classList.toggle('on',seated);
   const n=G?G.n:0;
