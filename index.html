@@ -638,6 +638,9 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .jpop .jrow{display:flex;gap:8px}.jpop button{flex:1;min-height:42px;border-radius:12px;font:700 13.5px Inter,sans-serif;border:0;cursor:pointer}
 .jpop .jgo{background:var(--goldg);color:#2b1c00}.jpop .jno{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid rgba(255,255,255,.14)}
 
+/* stack under the new-player popup instead of hiding behind it */
+body:has(.jpop:not(.hide)) .vtoast,body:has(.jpop:not(.hide)) .spyb{top:calc(226px + env(safe-area-inset-top))}
+.vtoast span{white-space:nowrap}
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -897,7 +900,7 @@ function deal(){
   if(s){who=s.slice(0,maxPlayers());let k=1;const taken=new Set(who.map(x=>x.seat));const humans=peers.filter(p=>p.kind==='viewer').length;
   /* bots only ever fill in when you're the only person at the table */
   if(humans>=2&&who.length<2){const w=peers.find(p=>p.kind==='viewer'&&!p.isMe&&!who.some(x=>x.peer===p.peer));flash(w&&w.presence&&w.presence.nm?`Waiting for ${String(w.presence.nm).slice(0,14)} to sit`:'Waiting for your friend to sit');return}
-  for(let q=0;q<9&&humans<2&&who.length<(who.length>=2?0:+$('np').value);q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
+  const want=(humans<2&&who.length<2)?Math.min(+$('np').value||0,maxPlayers()):0;for(let q=0;q<9&&who.length<want;q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
   else who=Array.from({length:+$('np').value},(_,i)=>({nm:i===0&&myName?myName:'Player '+(i+1),peer:i===0?'me':''}));
   const dl=$('wb').value==='w'?wetDeal(who.length,nc):plainDeal(who.length,nc);const h=dl.h,d=dl.rest;
   const prevW=validSt(G&&G.st)?G.st:loadSt();
@@ -936,7 +939,9 @@ function joinWatch(){if(!room)return;const cl=seatClaims().filter(Boolean);const
   if(!fresh.length||!mine||!G||mine.g!==G)return;
   if(Array.isArray(G.pp)&&fresh.every(c=>G.pp.includes(c.peer)))return;
   showJoin(fresh.map(c=>c.nm),Array.isArray(G.pp)&&G.pp.some(p=>!p))}
+let pendingJoin=null;
 function showJoin(names,bots){const el=$('jpop');if(!el)return;
+  if(sq){pendingJoin=[names,bots];if(bots){clearTimeout(botT);botT=null;clearTimeout(autoNextT);autoNextT=null}return} /* don't cover a card someone is peeling */
   const nm=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];const one=names.length===1;
   el.innerHTML=bots
     ?`<p><b>${esc(nm)}</b> sat down</p><div class="jrow" style="margin-top:10px"><button class="jgo" data-j="deal">End hand · play with ${one?esc(names[0]):'them'}</button></div>`
@@ -944,7 +949,7 @@ function showJoin(names,bots){const el=$('jpop');if(!el)return;
   el.classList.remove('hide');try{sfx('ping')}catch(e){}
   if(bots){clearTimeout(botT);botT=null;clearTimeout(autoNextT);autoNextT=null}}
 $('jpop').addEventListener('click',e=>{const b=e.target.closest('[data-j]');if(!b)return;const j=b.dataset.j;$('jpop').classList.add('hide');
-  if(j==='fresh'){stE=Date.now();store.set('of-st',{});store.set('of-st-e',stE);if(mine)mine.g={...mine.g,st:{}};drawStats({})}
+  if(j==='fresh'){stE=Date.now();store.set('of-st',{});store.set('of-st-e',stE);if(mine){mine.g={...mine.g,st:{}};publish()}drawStats({});refresh()}
   if(j==='deal'||j==='fresh'){clearTimeout(autoT);autoT=null;deal()}});
 function refresh(){
   try{dropBots()}catch(e){}
@@ -1666,7 +1671,7 @@ function sqCtx(){const el=$('sqctx');if(!el)return;if(!sq||!G){el.innerHTML='';r
 function sqButtons(){if(!sq||!G)return;sqCtx();const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
 let lockY=0;
 function lockScroll(on){const b=document.body;if(on&&!b.classList.contains('locked')){lockY=window.scrollY;b.style.top=-lockY+'px';b.classList.add('locked')}else if(!on&&b.classList.contains('locked')){b.classList.remove('locked');b.style.top='';window.scrollTo(0,lockY)}}
-function closeSqueeze(){if(!sq)return;sq=null;$('sqz').classList.add('hide');lockScroll(false);$('big').classList.remove('shown');$('sqctl').classList.remove('hide');if(room)room.presence({pk:null}).catch(()=>{})}
+function closeSqueeze(){if(!sq)return;sq=null;$('sqz').classList.add('hide');lockScroll(false);$('big').classList.remove('shown');$('sqctl').classList.remove('hide');if(room)room.presence({pk:null}).catch(()=>{});if(pendingJoin){const p=pendingJoin;pendingJoin=null;setTimeout(()=>showJoin(...p),250)}}
 let sqLand=store.get('of-land',false)===true;
 const r3=v=>Math.round(v*1000)/1000;
 function sendPk(force){if(!room||!sq)return;if(G&&(G.wp===0||!canFlipCard(sq.i,sq.j))){if(force)room.presence({pk:null}).catch(()=>{});return}const t=performance.now();if(force||t-pkT>45){pkT=t;room.presence({pk:{e:sq.e,i:sq.i,j:sq.j,a:sq.a?sq.a.map(r3):null,b:sq.b?sq.b.map(r3):null,tr:sq.torn?1:0,l:sqLand}}).catch(()=>{})}}
@@ -2145,7 +2150,8 @@ async function joinVoice(){
 function leaveVoice(){if(vStream)vStream.getTracks().forEach(t=>t.stop());vStream=null;if(room)room.presence({vc:null});syncCalls();vcBtns()}
 $('vc').addEventListener('click',()=>{if(vStream)leaveVoice();else joinVoice()});
 $('mute').addEventListener('click',()=>{if(!vStream)return;const t=vStream.getAudioTracks()[0];t.enabled=!t.enabled;vcBtns()});
-peersHandlers.push(()=>{syncCalls();vcBtns()});
+/* these run before the app's own handler: take the fresh peer list first */
+peersHandlers.push(ch=>{if(ch&&ch.peers)peers=ch.peers;syncCalls();vcBtns()});
 
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;
   try{if(peer&&!peer.destroyed&&peer.disconnected)peer.reconnect()}catch(e){}
@@ -2177,7 +2183,7 @@ function voiceToast(nm){const el=$('vtoast');if(!el)return;
   el.innerHTML=`<span>🎙️ <b>${esc(nm)}</b> joined voice chat</span>`+(vStream?'':'<button id="vtjoin">Join</button>');
   el.classList.remove('hide');try{sfx('ping')}catch(e){}clearTimeout(vtT);vtT=setTimeout(()=>el.classList.add('hide'),5000);
   const b=$('vtjoin');if(b)b.onclick=e=>{e.stopPropagation();el.classList.add('hide');$('vc').click()}}
-peersHandlers.push(()=>{const now=new Map(peers.filter(p=>!p.isMe&&p.presence&&p.presence.vc===1).map(p=>[p.peer,p.presence.nm||'Someone']));
+peersHandlers.push(ch=>{if(ch&&ch.peers)peers=ch.peers;const now=new Map(peers.filter(p=>!p.isMe&&p.presence&&p.presence.vc===1).map(p=>[p.peer,p.presence.nm||'Someone']));
   if(vcPrev)for(const [id,nm] of now)if(!vcPrev.has(id))voiceToast(nm);vcPrev=now});
 }
 </script>
