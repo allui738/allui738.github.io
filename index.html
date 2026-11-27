@@ -548,7 +548,15 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .sqbeat{font:500 13.5px/1.3 Inter,sans-serif;color:rgba(246,242,231,.85);text-align:center;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--line)}
 .sqbeat b{color:var(--gold)}.sqbeat.lead{border-color:rgba(239,195,90,.5);color:var(--gold)}.sqbeat.muted{color:var(--muted)}
 .sqme{font:500 12.5px Inter,sans-serif;color:var(--muted)}.sqme b{color:var(--ink)}
-.sqz .big{width:min(66vw,250px,calc((100dvh - 430px)*.714));min-width:150px}
+.sqz .big{width:min(84vw,320px,calc((100dvh - 330px)*.714));min-width:170px;margin-bottom:10px}
+#sqctl{padding:7px;gap:6px;border-radius:16px}
+#sqctl .row{gap:6px}
+#sqctl button{min-height:40px;font-size:14px;letter-spacing:.4px;border-radius:10px}
+#sqctl .row.sm3 button{min-height:34px;font:600 11.5px Inter,sans-serif;letter-spacing:.3px;padding:0 4px}
+#sqctl .go{font-size:16px}
+.slamb small{font-size:9.5px!important}
+.sqhint{font-size:11px!important;margin-top:7px!important}
+.sqctx{margin-bottom:6px}.sqlab{margin:0 0 6px!important;font-size:13px!important}
 
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
@@ -624,7 +632,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
   </details>
   <footer class="copy">© November 2026 Omaha Flips. All rights reserved.</footer>
 </div>
-<div class="sqz hide" id="sqz"><div class="sqbox"><div class="sqctx" id="sqctx"></div><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row"><button class="alt" id="sqrot">TURN SIDEWAYS</button></div><div class="row"><button class="alt" id="sqaside">SET ASIDE</button><button class="alt slamb" id="sqslam">SLAM IT<small>think you&rsquo;ve got the nuts?</small></button></div><div class="row"><button class="alt" id="sqclose">PUT IT BACK</button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
+<div class="sqz hide" id="sqz"><div class="sqbox"><div class="sqctx" id="sqctx"></div><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row sm3"><button class="alt" id="sqrot">TURN SIDEWAYS</button><button class="alt" id="sqaside">SET ASIDE</button><button class="alt" id="sqclose">PUT IT BACK</button></div><div class="row"><button class="alt slamb" id="sqslam">SLAM IT<small>got the nuts?</small></button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
 <div class="spy hide" id="spy"><p class="sqlab" id="spylab"></p><div class="big sm" id="spybig"></div></div>
 <div class="toast hide" id="toast"></div>
 <div class="chat hide" id="chat" role="dialog" aria-label="Table chat"><div class="chatbox"><div class="chhead"><b>Table chat</b><button class="ghost" id="chx">Close</button></div><div class="chlist" id="chlist"><p class="empty">No messages yet. Say something.</p></div><form class="chf" id="chf"><input id="chi" maxlength="140" placeholder="Say something…" autocomplete="off" aria-label="Message"><button class="go" type="submit">SEND</button></form></div></div>
