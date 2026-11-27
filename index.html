@@ -559,6 +559,17 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .sqhint{font-size:11px!important;margin-top:7px!important}
 .sqctx{margin-bottom:6px}.sqlab{margin:0 0 6px!important;font-size:13px!important}
 
+/* peel screen scrolls if it doesn't fit; dragging on the card itself still peels */
+.sqz{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;align-items:flex-start;overscroll-behavior:contain}
+.sqz .sqbox{margin:auto 0;padding-bottom:8px}
+.sqz .big{touch-action:none}
+
+/* the peel screen scrolls (the card itself still takes your finger for peeling) */
+.sqz{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;align-items:flex-start}
+.sqz .sqbox{margin:auto 0;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.sqz #sqctl,.sqz .sqctx,.sqz .sqhint{touch-action:pan-y}
+.sqz .big{touch-action:none}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
