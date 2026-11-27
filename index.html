@@ -517,6 +517,8 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .latenote b{color:#dbe6ff}
 @media (prefers-reduced-motion:reduce){.c.lateflip{animation:none}}
 
+#tvol{flex:none;width:130px;min-height:32px;accent-color:#efc35a;background:none;border:0;padding:0}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -582,6 +584,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 <div class="cfm hide" id="cfm" role="dialog" aria-modal="true" aria-labelledby="cfmt"><div class="cfmbox"><h3 id="cfmt">Reset standings?</h3><p id="cfmp">This wipes every player's wins, chops and losses for the whole table. It can't be undone.</p><div class="cfmrow"><button class="cfmno" id="cfmno">Cancel</button><button class="cfmyes" id="cfmyes">Yes, reset</button></div></div></div>
 <div class="modal hide" id="setm" role="dialog" aria-modal="true" aria-labelledby="sett"><div class="mbox"><div class="mhead"><h3 id="sett">Settings</h3><button class="ghost" data-close>Done</button></div>
   <div class="srow"><div><b>Sounds</b><small>Card flips, slams, throws, jackpot alarm</small></div><button class="tog" id="tsnd" role="switch"></button></div>
+  <div class="srow"><div><b>Volume</b><small>How loud the sound effects are</small></div><input type="range" id="tvol" min="0" max="100" step="5" aria-label="Sound effects volume"></div>
   <div class="srow"><div><b>Vibration</b><small>Buzz on slams, throws and your turn (Android)</small></div><button class="tog" id="tvib" role="switch"></button></div>
   <div class="srow"><div><b>Auto next hand</b><small>When you deal, the next hand deals itself after a short countdown</small></div><button class="tog" id="tauto" role="switch"></button></div>
   <div class="srow"><div><b>Four-colour deck</b><small>Diamonds blue, clubs green. Easier to read suits at a glance</small></div><button class="tog" id="tfc" role="switch"></button></div>
@@ -966,7 +969,7 @@ function nextMine(){
 let AC=null;
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});return AC}
 document.addEventListener('pointerdown',()=>{if(prefs&&prefs.snd)ac()},{passive:true});
-const VOL=.5;
+let VOL=(()=>{const v=store.get('of-vol2',.25);return typeof v==='number'&&v>=0&&v<=1?v:.25})();
 function tone(f,t0,d,type='sine',v=.2,f2){const a=ac();if(!a)return;v*=VOL;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime+t0);if(f2)o.frequency.exponentialRampToValueAtTime(f2,a.currentTime+t0+d);g.gain.setValueAtTime(0.0001,a.currentTime+t0);g.gain.exponentialRampToValueAtTime(v,a.currentTime+t0+.01);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+t0+d);o.connect(g);g.connect(a.destination);o.start(a.currentTime+t0);o.stop(a.currentTime+t0+d+.05)}
 function noise(t0,d,v=.3,lo=800,hi=6000){const a=ac();if(!a)return;v*=VOL;const n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.2);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=Math.sqrt(lo*hi);f.Q.value=.7;const g=a.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(a.destination);s.start(a.currentTime+t0)}
 function fart(){const a=ac();if(!a)return;const t=a.currentTime,d=.75+Math.random()*.35;
@@ -1564,6 +1567,7 @@ function openModal(id){$('menu').open=false;$(id).classList.remove('hide');lockS
 function closeModal(el){el.classList.add('hide');if(!document.querySelector('.modal:not(.hide)')&&!sq)lockScroll(false)}
 document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))closeModal(m)})});
 const prefs={snd:store.get('of-snd',true)!==false,vib:store.get('of-vib',true)!==false,auto:store.get('of-auto',true)!==false,fc:store.get('of-fc',false)===true};document.body.classList.toggle('fc',prefs.fc);
+$('tvol').value=Math.round(VOL*200);$('tvol').addEventListener('input',()=>{VOL=+$('tvol').value/200;store.set('of-vol2',VOL)});$('tvol').addEventListener('change',()=>sfx('ping'));
 function togUI(){[['tsnd','snd'],['tvib','vib'],['tauto','auto'],['tfc','fc']].forEach(([id,k])=>{$(id).classList.toggle('on',prefs[k]);$(id).setAttribute('aria-checked',prefs[k])})}
 [['tsnd','snd'],['tvib','vib'],['tauto','auto'],['tfc','fc']].forEach(([id,k])=>$(id).addEventListener('click',()=>{prefs[k]=!prefs[k];store.set('of-'+k,prefs[k]);togUI();document.body.classList.toggle('fc',prefs.fc);if(k==='snd'&&prefs.snd)sfx('ping');if(k==='auto'&&!prefs.auto)stopAutoNext()}));
 togUI();
