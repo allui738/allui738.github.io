@@ -619,7 +619,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
       <h4>Money and the jackpot</h4>
       <p>Set a wager per hand and an optional bad beat jackpot (progressive keeps growing until it hits). Standings show what you're up or down on flips and on the jackpot separately, and <b>Menu → Settle up</b> works out who pays whom.</p>
       <h4>If someone drops</h4>
-      <p>The table keeps going. Another phone takes over hosting, and if the dealer leaves mid-hand anyone can tap <b>Take over this hand</b>. Leaving the app and coming back puts you right back in your seat. Standings are saved on your phone.</p>
+      <p>The table keeps going. Another phone takes over hosting, and if the host leaves mid-hand anyone can tap <b>Take over as host</b> to keep the hand going. Leaving the app and coming back puts you right back in your seat. Standings are saved on your phone.</p>
     </div>
   </details>
   <footer class="copy">© November 2026 Omaha Flips. All rights reserved.</footer>
@@ -873,13 +873,13 @@ function refresh(){
   if(!G||G.m!=='f'){const el=$('beatm');if(el.dataset.h){el.dataset.h='';el.innerHTML=''}}
   {const h=G&&G.jh;const ok=h&&typeof h.L==='string'&&typeof h.pot==='number'&&Array.isArray(h.W);$('jpb').innerHTML=ok?`<div class="jpbanner"><b>BAD BEAT JACKPOT!</b>${esc(h.L)}'s ${esc(String(h.lv||''))} lost to ${esc(h.W.join(' & '))}'s ${esc(String(h.wv||''))}. ${esc(h.L)} takes the jackpot: ${money(h.pot)}</div>`:''}
   try{renderMini()}catch(e){}
-  $('street').textContent=(Number.isInteger(G.btn)&&G.who[G.btn]?`Hand ${G.hn||1} · ${G.who[G.btn]} on the button · `:`${G.dl} dealing · `)+(reviewN!=null?'Looking back at the '+['','preflop','flop','turn'][reviewN]:['','Preflop','Flop','Turn','River'][n])+(G.m==='f'&&n===4?' · Sweat flips':'')+(G.orphan?' · Dealer left: tap Take over':'')+(G.wg?' · '+money(G.wg)+' a hand':'')+(G.wb?' · Bad beat boards':'')+(G.m==='f'&&G.wp===0?' · Private peels':'');
+  $('street').textContent=(Number.isInteger(G.btn)&&G.who[G.btn]?`Hand ${G.hn||1} · ${G.who[G.btn]} on the button · `:`${G.dl} dealing · `)+(reviewN!=null?'Looking back at the '+['','preflop','flop','turn'][reviewN]:['','Preflop','Flop','Turn','River'][n])+(G.m==='f'&&n===4?' · Sweat flips':'')+(G.orphan?' · Host left: tap Take over as host':'')+(G.wg?' · '+money(G.wg)+' a hand':'')+(G.wb?' · Bad beat boards':'')+(G.m==='f'&&G.wp===0?' · Private peels':'');
   const st=validSt(G.st)?G.st:{};
   if(!revealing){if(Object.keys(st).length)saveSt(st,G.e);drawStats(st)}
 }
 function btns(iDeal,n){
   const go=$('go'),auto=$('auto');
-  if(G&&G.orphan){go.textContent='TAKE OVER THIS HAND';go.disabled=false;auto.disabled=true;auto.textContent='RUN IT OUT';return}
+  if(G&&G.orphan){go.textContent='TAKE OVER AS HOST';go.disabled=false;auto.disabled=true;auto.textContent='RUN IT OUT';return}
   if(G&&G.m==='f'&&n<4&&sbWaiting(G)){const mineT=!!FD&&nextMine()!=null;go.textContent=mineT?'FLIP YOUR FIRST CARD':'WAITING FOR SB';go.disabled=!mineT;auto.disabled=true;auto.textContent='RUN IT OUT';return}
   if(G&&G.m==='f'&&n===4&&(!FD||!FD.done)){
     const mineT=!!FD&&nextMine()!=null;
