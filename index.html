@@ -1939,6 +1939,9 @@ class RelayPeer{
 window.Peer=RelayPeer;
 })();
 
+try{history.scrollRestoration='manual'}catch(e){}
+function toTop(){try{document.activeElement&&document.activeElement.blur&&document.activeElement.blur()}catch(e){}window.scrollTo(0,0);requestAnimationFrame(()=>window.scrollTo(0,0));setTimeout(()=>window.scrollTo(0,0),350)}
+window.addEventListener('pageshow',()=>{if(!document.body.classList.contains('locked'))window.scrollTo(0,0)});
 /* ---------- live table over PeerJS (host relays everyone's state) ---------- */
 window.OF_HOSTED_CHAT=true;
 const PFX='omahaflip-v3-';
@@ -1975,7 +1978,7 @@ function goLive(){
   try{restoreSession(sv)}catch(e){}
   room.presence({nm:myName,sit:seated,...(sv&&Number.isInteger(sv.seat)?{seat:sv.seat}:{})});
   room.onPeers(ch=>{peers=ch.peers;myPeer=myId;if(mine&&ch.joined.length)publish();refresh();if(G&&!revealing)drawAll(G,false)});
-  $('lobby').classList.add('hide');$('inv').classList.remove('hide');$('vc').classList.remove('hide');
+  $('lobby').classList.add('hide');$('inv').classList.remove('hide');$('vc').classList.remove('hide');toTop();
   try{history.replaceState(null,'','#'+code)}catch(e){}
   refresh();
 }
@@ -2080,7 +2083,7 @@ $('bnew').addEventListener('click',()=>{if(needName())startTable()});
 $('bjoin').addEventListener('click',()=>{if(needName())joinTable(code)});
 $('bcode').addEventListener('click',()=>{const c=$('jcode').value.trim().toUpperCase();if(!needName())return;if(!/^[A-Z0-9]{4}$/.test(c)){lerr('Codes are 4 letters or numbers');return}joinTable(c)});
 $('jcode').addEventListener('keydown',e=>{if(e.key==='Enter')$('bcode').click()});
-$('bsolo').addEventListener('click',()=>{const n=$('lname').value.trim();if(n){myName=n.slice(0,14);store.set('of-name',myName);$('me').value=myName}$('lobby').classList.add('hide');refresh()});
+$('bsolo').addEventListener('click',()=>{const n=$('lname').value.trim();if(n){myName=n.slice(0,14);store.set('of-name',myName);$('me').value=myName}$('lobby').classList.add('hide');refresh();toTop()});
 {const h=(location.hash||'').replace('#','').toUpperCase();if(/^[A-Z0-9]{4}$/.test(h)){code=h;$('lcode').textContent=h;$('ljoin').classList.remove('hide');$('lstart').classList.add('hide');
   /* coming back to a table you were at: rejoin straight away */
   if(myName&&store.get('of-id-'+h,null)){lerr('Rejoining table '+h+'…');setTimeout(()=>{if(!room)joinTable(h)},300)}}}
