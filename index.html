@@ -620,6 +620,16 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 
 .bar{z-index:18!important}
 
+/* someone is peeling: opt-in pill, and the watch view closes with a tap */
+.spyb{position:fixed;left:50%;transform:translateX(-50%);top:calc(72px + env(safe-area-inset-top));z-index:17;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-radius:999px;background:rgba(14,22,18,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(239,195,90,.45);color:var(--ink);font:500 13px Inter,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:pop .2s ease-out;white-space:nowrap}
+.spyb b{color:var(--gold);font-weight:700}
+.spyb span{background:var(--goldg);color:#2b1c00;font:700 12px Inter,sans-serif;padding:5px 11px;border-radius:999px}
+.spy{pointer-events:auto!important;cursor:pointer;top:calc(72px + env(safe-area-inset-top))!important}
+.spy::after{content:"tap to close";display:block;font:500 10.5px Inter,sans-serif;color:rgba(255,255,255,.5);margin-top:6px}
+.vtoast{position:fixed;left:50%;transform:translateX(-50%);top:calc(72px + env(safe-area-inset-top));z-index:39;display:flex;align-items:center;gap:10px;padding:9px 9px 9px 14px;border-radius:16px;background:rgba(14,22,18,.95);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(127,224,160,.45);color:var(--ink);font:500 13.5px Inter,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.55);max-width:92vw;animation:pop .2s ease-out}
+.vtoast b{color:#7fe0a0}
+.vtoast button{border:0;border-radius:10px;padding:7px 12px;background:linear-gradient(180deg,#3fd083,#22a65e);color:#05210f;font:700 12.5px Inter,sans-serif;white-space:nowrap}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -698,7 +708,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 </div>
 <div class="sqz hide" id="sqz"><div class="sqbox"><div class="sqctx" id="sqctx"></div><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row sm3"><button class="alt" id="sqrot">TURN SIDEWAYS</button><button class="alt" id="sqaside">SET ASIDE</button><button class="alt" id="sqclose">PUT IT BACK</button></div><div class="row"><button class="alt slamb" id="sqslam">SLAM IT<small>got the nuts?</small></button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
 <div class="spy hide" id="spy"><p class="sqlab" id="spylab"></p><div class="big sm" id="spybig"></div></div>
-<div class="toast hide" id="toast"></div>
+<div class="toast hide" id="toast"></div><div class="vtoast hide" id="vtoast"></div><button class="spyb hide" id="spyb"></button>
 <div class="chat hide" id="chat" role="dialog" aria-label="Table chat"><div class="chatbox"><div class="chhead"><b>Table chat</b><button class="ghost" id="chx">Close</button></div><div class="chlist" id="chlist"><p class="empty">No messages yet. Say something.</p></div><form class="chf" id="chf"><input id="chi" maxlength="140" placeholder="Say something…" autocomplete="off" aria-label="Message"><button class="go" type="submit">SEND</button></form></div></div>
 <div class="cfm hide" id="cfm" role="dialog" aria-modal="true" aria-labelledby="cfmt"><div class="cfmbox"><h3 id="cfmt">Reset standings?</h3><p id="cfmp">This wipes every player's wins, chops and losses for the whole table. It can't be undone.</p><div class="cfmrow"><button class="cfmno" id="cfmno">Cancel</button><button class="cfmyes" id="cfmyes">Yes, reset</button></div></div></div>
 <div class="modal hide" id="setm" role="dialog" aria-modal="true" aria-labelledby="sett"><div class="mbox"><div class="mhead"><h3 id="sett">Settings</h3><button class="ghost" data-close>Done</button></div>
@@ -1663,13 +1673,16 @@ $('sqclose').addEventListener('click',closeSqueeze);
 $('sqrot').addEventListener('click',()=>{if(!sq)return;sqLand=!sqLand;store.set('of-land',sqLand);$('big').classList.toggle('land',sqLand);$('sqrot').textContent=sqLand?'STAND IT UP':'TURN SIDEWAYS';sq.a=sq.b=null;setPeel($('big'),null,null);sendPk(true)});
 $('seats').addEventListener('click',e=>{const el=e.target.closest('[data-sq]');if(el&&G){openSqueeze(+el.dataset.s,+el.dataset.j)}});
 const okPt=v=>Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==='number'&&x>=-1&&x<=2);
+let spyOn=null;
 function drawSpy(g){
   let hit=null;if(g&&g.wp===0){$('spy').classList.add('hide');$('spy').dataset.k='';return}
   if(room&&g&&g.m==='f')for(let i=0;i<g.h.length;i++){const pp=g.pp&&g.pp[i];if(!pp||pp===myPeer)continue;const p=peers.find(x=>x.peer===pp);const pk=p&&p.presence&&p.presence.pk;
     if(pk&&pk.e===g.e&&pk.i===i&&mayFlip(i)&&Number.isInteger(pk.j)&&pk.j>=0&&pk.j<g.h[i].length&&!flipsFor(g,i).includes(pk.j)){hit={i,j:pk.j,a:okPt(pk.a)?pk.a:null,b:okPt(pk.b)?pk.b:null,tr:pk.tr===1,l:pk.l===true};break}}
-  const el=$('spy');
-  if(!hit){el.classList.add('hide');el.dataset.k='';return}
+  const el=$('spy'),pill=$('spyb');
+  if(!hit){el.classList.add('hide');el.dataset.k='';pill.classList.add('hide');return}
   const k=g.e+':'+hit.i+':'+hit.j;
+  const watching=spyOn===g.e+':'+hit.i;pill.textContent='';pill.innerHTML=`<b>${esc(g.who[hit.i])}</b> is peeling <span>Watch</span>`;pill.dataset.k=g.e+':'+hit.i;pill.classList.toggle('hide',watching||!!sq);
+  if(!watching){el.classList.add('hide');return}
   if(el.dataset.k!==k){el.dataset.k=k;$('spybig')._tear=null;$('spybig')._peel=null;$('spybig').innerHTML=bigFace(g.h[hit.i][hit.j]);$('spylab').textContent=`${g.who[hit.i]} is squeezing…`}
   $('spybig').classList.toggle('land',hit.l);el.classList.remove('hide');
   if(hit.tr&&!$('spybig')._tear)tearOut($('spybig'),[newSeed(),newSeed()],true);
@@ -1677,6 +1690,8 @@ function drawSpy(g){
   if(gm&&gm.frac>.2)manualKeys.add(k);
 }
 $('nxp').addEventListener('click',stopAutoNext);
+$('spyb').addEventListener('click',()=>{spyOn=$('spyb').dataset.k||null;try{drawSpy(G)}catch(e){}});
+$('spy').addEventListener('click',()=>{spyOn=null;try{drawSpy(G)}catch(e){}});
 $('seats').addEventListener('click',e=>{
   if(e.target.closest('#peekb')){peekOn=!peekOn;if(G)drawFlip(G);return}
   const f=e.target.closest('[data-for]');if(f&&mine&&FD){const i=+f.dataset.for;if(mayFlip(i))dealerFlip(i)}
@@ -2120,6 +2135,15 @@ function hostWatch(){if(!isHost)return;const hp=hostPeer;
 setInterval(hostWatch,4000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(hostWatch,300)});
 window.addEventListener('online',()=>setTimeout(hostWatch,300));
+
+/* tell everyone when someone hops into voice chat */
+let vcPrev=null,vtT=null;
+function voiceToast(nm){const el=$('vtoast');if(!el)return;
+  el.innerHTML=`<span>🎙️ <b>${esc(nm)}</b> joined voice chat</span>`+(vStream?'':'<button id="vtjoin">Join</button>');
+  el.classList.remove('hide');try{sfx('ping')}catch(e){}clearTimeout(vtT);vtT=setTimeout(()=>el.classList.add('hide'),5000);
+  const b=$('vtjoin');if(b)b.onclick=e=>{e.stopPropagation();el.classList.add('hide');$('vc').click()}}
+peersHandlers.push(()=>{const now=new Map(peers.filter(p=>!p.isMe&&p.presence&&p.presence.vc===1).map(p=>[p.peer,p.presence.nm||'Someone']));
+  if(vcPrev)for(const [id,nm] of now)if(!vcPrev.has(id))voiceToast(nm);vcPrev=now});
 }
 </script>
 </body>
