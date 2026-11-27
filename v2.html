@@ -1943,6 +1943,26 @@ peersHandlers.push(()=>{syncCalls();vcBtns()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)return;
   try{if(peer&&!peer.destroyed&&peer.disconnected)peer.reconnect()}catch(e){}
   try{if(hostPeer&&!hostPeer.destroyed&&hostPeer.disconnected)hostPeer.reconnect()}catch(e){}});
+
+/* ---------- host keep-alive ----------
+   iPhones cut the host's link to the matchmaking server when the app goes to the background.
+   The table still looks fine on the host's screen, but nobody new can find it. Check every few
+   seconds and re-register the table code if it has dropped. */
+let rehosting=false;
+function rehost(){if(rehosting||!isHost)return;rehosting=true;
+  const hp=new Peer(hostIdFor(gen));let done=false;
+  hp.on('open',()=>{done=true;rehosting=false;const old=hostPeer;hostPeer=hp;if(old&&old!==hp&&old.destroyed===false&&old.disconnected){/* keep its live connections; it just can't take new ones */}});
+  hostHandlers(hp);
+  hp.on('error',e=>{if(done)return;rehosting=false;try{hp.destroy()}catch(_){}});
+  hp.on('disconnected',()=>{setTimeout(()=>{try{if(!hp.destroyed&&hp.disconnected)hp.reconnect()}catch(e){}},500)});
+  setTimeout(()=>{if(!done){rehosting=false;try{hp.destroy()}catch(_){}}},10000)}
+function hostWatch(){if(!isHost)return;const hp=hostPeer;
+  if(!hp||hp.destroyed){rehost();return}
+  if(hp.disconnected){if(!hp._rc){hp._rc=Date.now();try{hp.reconnect()}catch(e){}}else if(Date.now()-hp._rc>7000)rehost()}else hp._rc=0;
+  try{if(peer&&!peer.destroyed&&peer.disconnected)peer.reconnect()}catch(e){}}
+setInterval(hostWatch,4000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(hostWatch,300)});
+window.addEventListener('online',()=>setTimeout(hostWatch,300));
 }
 </script>
 </body>
