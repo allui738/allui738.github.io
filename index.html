@@ -886,7 +886,10 @@ function deal(){
   clearTimeout(autoNextT);autoNextT=null;
   const nc=+$('nc').value;let who;
   const s=seatedNames();
-  if(s){who=s.slice(0,maxPlayers());let k=1;const taken=new Set(who.map(x=>x.seat));for(let q=0;q<9&&who.length<(who.length>=2?0:+$('np').value);q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
+  if(s){who=s.slice(0,maxPlayers());let k=1;const taken=new Set(who.map(x=>x.seat));const humans=peers.filter(p=>p.kind==='viewer').length;
+  /* bots only ever fill in when you're the only person at the table */
+  if(humans>=2&&who.length<2){const w=peers.find(p=>p.kind==='viewer'&&!p.isMe&&!who.some(x=>x.peer===p.peer));flash(w&&w.presence&&w.presence.nm?`Waiting for ${String(w.presence.nm).slice(0,14)} to sit`:'Waiting for your friend to sit');return}
+  for(let q=0;q<9&&humans<2&&who.length<(who.length>=2?0:+$('np').value);q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
   else who=Array.from({length:+$('np').value},(_,i)=>({nm:i===0&&myName?myName:'Player '+(i+1),peer:i===0?'me':''}));
   const dl=$('wb').value==='w'?wetDeal(who.length,nc):plainDeal(who.length,nc);const h=dl.h,d=dl.rest;
   const prevW=validSt(G&&G.st)?G.st:loadSt();
@@ -917,6 +920,8 @@ let lastRender={e:0,b:0},eqShown=null,pending=null;
 /* a real player sat down while bots are in the hand: take the bots out and deal a fresh hand */
 let botDropT=null;
 function dropBots(){if(!room||!G||!mine||mine.g!==G||!Array.isArray(G.pp)||!G.pp.some(p=>!p))return;
+  /* a friend is here but not seated yet: stop the bot hand from rolling into another one */
+  if(peers.filter(p=>p.kind==='viewer').length>=2){clearTimeout(autoNextT);autoNextT=null;clearTimeout(botT);botT=null}
   const real=seatClaims().filter(Boolean).length;if(real<2||botDropT)return;
   botDropT=setTimeout(()=>{botDropT=null;if(!mine||!G||!G.pp.some(p=>!p)||seatClaims().filter(Boolean).length<2)return;flash('A player joined. Bots are out, fresh hand.');deal()},800)}
 function refresh(){
