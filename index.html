@@ -806,7 +806,7 @@ $('me').value=myName;$('nc').value=String(store.get('of-nc',5));$('md').value=st
 
 function maxPlayers(){return Math.min(9,Math.floor(47/ +$('nc').value))}
 const npKey=()=>room?'of-fill':'of-np';
-function fillNp(){const m=maxPlayers();let v=Math.min(+store.get(npKey(),room?0:4),m);if(!room&&v<2)v=2;const opts=Array.from({length:m-1},(_,i)=>i+2);if(room)opts.unshift(0);$('np').innerHTML=opts.map(n=>`<option value="${n}" ${n==v?'selected':''}>${n===0?'No bots':room?`Fill to ${n} players (you + bots)`:`${n} players`}</option>`).join('')}
+function fillNp(){const m=maxPlayers();let v=Math.min(+store.get(npKey(),room?0:4),m);if(!room&&v<2)v=2;const opts=Array.from({length:m-1},(_,i)=>i+2);if(room)opts.unshift(0);$('np').innerHTML=opts.map(n=>`<option value="${n}" ${n==v?'selected':''}>${n===0?'No bots':room?`${n} players, only when you're alone`:`${n} players`}</option>`).join('')}
 fillNp();
 
 function validG(g){return g&&typeof g==='object'&&typeof g.e==='number'&&(g.m===undefined||g.m==='f'||g.m==='u')&&(g.sb===undefined||(Number.isInteger(g.sb)&&g.sb>=0&&g.sb<9))&&(g.jp===undefined||(typeof g.jp==='number'&&g.jp>=0&&g.jp<1e7))&&(g.jka===undefined||(typeof g.jka==='number'&&g.jka>=0&&g.jka<=10000))&&(g.fb===undefined||(Array.isArray(g.fb)&&g.fb.length===5&&g.fb.every(ok)))&&(g.wg===undefined||(typeof g.wg==='number'&&g.wg>=0&&g.wg<=100000))&&(g.ss===undefined||(Array.isArray(g.ss)&&g.ss.length===g.h.length&&g.ss.every(x=>Number.isInteger(x)&&x>=0&&x<9)))&&(g.btn===undefined||(Number.isInteger(g.btn)&&g.btn>=0&&g.btn<9))&&[1,2,3,4].includes(g.n)&&typeof g.dl==='string'&&Array.isArray(g.h)&&g.h.length>=2&&g.h.length<=9&&g.h.every(h=>Array.isArray(h)&&h.length>=4&&h.length<=10&&h.every(ok))&&Array.isArray(g.b)&&g.b.length<=5&&g.b.every(ok)&&Array.isArray(g.who)&&new Set([...g.h.flat(),...g.b]).size===g.h.flat().length+g.b.length}
@@ -876,7 +876,7 @@ function deal(){
   clearTimeout(autoNextT);autoNextT=null;
   const nc=+$('nc').value;let who;
   const s=seatedNames();
-  if(s){who=s.slice(0,maxPlayers());let k=1;const taken=new Set(who.map(x=>x.seat));for(let q=0;q<9&&who.length<+$('np').value;q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
+  if(s){who=s.slice(0,maxPlayers());let k=1;const taken=new Set(who.map(x=>x.seat));for(let q=0;q<9&&who.length<(who.length>=2?0:+$('np').value);q++)if(!taken.has(q))who.push({nm:'Bot '+(k++),peer:'',seat:q});who.sort((a,b)=>a.seat-b.seat);if(who.length<2){flash(who.length?'Need 2 players: wait for a friend or set bots':'Sit in first');return}}
   else who=Array.from({length:+$('np').value},(_,i)=>({nm:i===0&&myName?myName:'Player '+(i+1),peer:i===0?'me':''}));
   const dl=$('wb').value==='w'?wetDeal(who.length,nc):plainDeal(who.length,nc);const h=dl.h,d=dl.rest;
   const prevW=validSt(G&&G.st)?G.st:loadSt();
@@ -904,7 +904,13 @@ function autoRun(){
 
 /* ---------- render ---------- */
 let lastRender={e:0,b:0},eqShown=null,pending=null;
+/* a real player sat down while bots are in the hand: take the bots out and deal a fresh hand */
+let botDropT=null;
+function dropBots(){if(!room||!G||!mine||mine.g!==G||!Array.isArray(G.pp)||!G.pp.some(p=>!p))return;
+  const real=seatClaims().filter(Boolean).length;if(real<2||botDropT)return;
+  botDropT=setTimeout(()=>{botDropT=null;if(!mine||!G||!G.pp.some(p=>!p)||seatClaims().filter(Boolean).length<2)return;flash('A player joined. Bots are out, fresh hand.');deal()},800)}
 function refresh(){
+  try{dropBots()}catch(e){}
   try{saveSession()}catch(e){}
   try{ensureSeat()}catch(e){}
   try{renderChat()}catch(e){}
