@@ -1453,6 +1453,7 @@ function animBack(box,an,bn,done){
 }
 function openSqueeze(i,j){
   if(!canPeek(i,j))return;
+  sqLand=false; /* every card opens standing up; Turn sideways is one tap away */
   sq={i,j,e:G.e,a:null,b:null,drag:null};
   $('big').innerHTML=bigFace(G.h[i][j]);$('sqlab').textContent=`${G.who[i]} · card ${j+1}`;$('big').classList.remove('shown');$('sqctl').classList.remove('hide');$('sqhint').textContent='Peel from any side or corner · press and hold near the center to tear out the middle of the card and reveal a dot · Put it back returns to the table';$('big').classList.toggle('land',sqLand);$('sqrot').textContent=sqLand?'STAND IT UP':'TURN SIDEWAYS';
   $('big')._tear=null;$('big')._peel=null;
