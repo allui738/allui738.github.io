@@ -538,6 +538,18 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .hbody b{color:var(--ink)}
 .copy{text-align:center;font-size:11.5px;color:var(--muted);opacity:.7;margin:18px 0 4px;letter-spacing:.3px}
 
+/* peel screen: board + hand to beat */
+.sqctx{width:100%;margin:0 0 10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sqctx:empty{display:none}
+.sqboard,.sqopp{display:flex;gap:4px;justify-content:center}
+.sqboard .c{width:clamp(34px,10vw,44px);font-size:clamp(14px,4.2vw,18px);border-radius:5px}
+.sqopp .c{width:28px;font-size:12px;border-radius:4px;opacity:.85}
+.sqopp .c.used{opacity:1;transform:translateY(-3px);box-shadow:0 0 0 2px var(--gold)}
+.sqbeat{font:500 13.5px/1.3 Inter,sans-serif;color:rgba(246,242,231,.85);text-align:center;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--line)}
+.sqbeat b{color:var(--gold)}.sqbeat.lead{border-color:rgba(239,195,90,.5);color:var(--gold)}.sqbeat.muted{color:var(--muted)}
+.sqme{font:500 12.5px Inter,sans-serif;color:var(--muted)}.sqme b{color:var(--ink)}
+.sqz .big{width:min(66vw,250px,calc((100dvh - 430px)*.714));min-width:150px}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -612,7 +624,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
   </details>
   <footer class="copy">© November 2026 Omaha Flips. All rights reserved.</footer>
 </div>
-<div class="sqz hide" id="sqz"><div class="sqbox"><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row"><button class="alt" id="sqrot">TURN SIDEWAYS</button></div><div class="row"><button class="alt" id="sqaside">SET ASIDE</button><button class="alt slamb" id="sqslam">SLAM IT<small>think you&rsquo;ve got the nuts?</small></button></div><div class="row"><button class="alt" id="sqclose">PUT IT BACK</button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
+<div class="sqz hide" id="sqz"><div class="sqbox"><div class="sqctx" id="sqctx"></div><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row"><button class="alt" id="sqrot">TURN SIDEWAYS</button></div><div class="row"><button class="alt" id="sqaside">SET ASIDE</button><button class="alt slamb" id="sqslam">SLAM IT<small>think you&rsquo;ve got the nuts?</small></button></div><div class="row"><button class="alt" id="sqclose">PUT IT BACK</button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
 <div class="spy hide" id="spy"><p class="sqlab" id="spylab"></p><div class="big sm" id="spybig"></div></div>
 <div class="toast hide" id="toast"></div>
 <div class="chat hide" id="chat" role="dialog" aria-label="Table chat"><div class="chatbox"><div class="chhead"><b>Table chat</b><button class="ghost" id="chx">Close</button></div><div class="chlist" id="chlist"><p class="empty">No messages yet. Say something.</p></div><form class="chf" id="chf"><input id="chi" maxlength="140" placeholder="Say something…" autocomplete="off" aria-label="Message"><button class="go" type="submit">SEND</button></form></div></div>
@@ -1515,7 +1527,23 @@ function openSqueeze(i,j){
   {const ts=tornCards.get(G.e+':'+i+':'+j);if(ts){tearOut($('big'),ts,false);sq.torn=ts}}
   sqButtons();
 }
-function sqButtons(){if(!sq||!G)return;const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
+/* while peeling: the board up top, plus the hand you have to beat */
+function sqCtx(){const el=$('sqctx');if(!el)return;if(!sq||!G){el.innerHTML='';return}
+  const B=G.b||[],board=Array.from({length:5},(_,k)=>B[k]?cardH(P(B[k])):'<div class="c slot"></div>').join('');
+  let line='';
+  if(B.length<5)line='<div class="sqbeat muted">The board runs out before anyone flips</div>';
+  else if(G.m==='f'&&FD){const D=FD,me=sq.i,mine=D.seats[me];
+    const nm=i=>i===me?'You':esc(G.who[i]);
+    const myHand=mine&&mine.v?`<div class="sqme">You have <b>${esc(describe(mine.v))}</b></div>`:'';
+    if(G.fo===1){const L=(D.leaders||[]).filter(i=>i!==me);const lv=L.length&&D.seats[L[0]].v;
+      line=lv?`<div class="sqbeat">Leading: <b>${nm(L[0])}</b> · ${esc(describe(lv))}</div>`:(D.leaders&&D.leaders.includes(me)?'<div class="sqbeat lead">You’re leading</div>':'<div class="sqbeat muted">No hands made yet</div>')}
+    else if(D.barI<0||!D.bar)line=`<div class="sqbeat muted">${esc(G.who[(G.sb||0)%G.h.length])} (SB) flips first</div>`;
+    else if(D.barI===me)line=`<div class="sqbeat lead">You’re the hand to beat · <b>${esc(describe(D.bar))}</b></div>`;
+    else{const S=D.seats[D.barI],cards=(S&&S.shown||[]).map(j=>cardH(P(G.h[D.barI][j]),S.used&&S.used.includes(j)?'used':'')).join('');
+      line=`<div class="sqbeat">To beat: <b>${esc(G.who[D.barI])}</b> · ${esc(describe(D.bar))}</div><div class="sqopp">${cards}</div>`}
+    line+=myHand}
+  el.innerHTML=`<div class="sqboard">${board}</div>${line}`}
+function sqButtons(){if(!sq||!G)return;sqCtx();const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
 let lockY=0;
 function lockScroll(on){const b=document.body;if(on&&!b.classList.contains('locked')){lockY=window.scrollY;b.style.top=-lockY+'px';b.classList.add('locked')}else if(!on&&b.classList.contains('locked')){b.classList.remove('locked');b.style.top='';window.scrollTo(0,lockY)}}
 function closeSqueeze(){if(!sq)return;sq=null;$('sqz').classList.add('hide');lockScroll(false);$('big').classList.remove('shown');$('sqctl').classList.remove('hide');if(room)room.presence({pk:null}).catch(()=>{})}
