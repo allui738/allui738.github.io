@@ -1766,9 +1766,115 @@ function addAvatars(){orderPanels();
 }
 {const mo=new MutationObserver(()=>addAvatars());['mseats','seats'].forEach(id=>{const el=$(id);if(el)mo.observe(el,{childList:true})});}
 
+/* ---------- relay transport ----------
+   Phones on cellular networks often can't connect to each other directly, so table traffic now goes
+   through a public MQTT relay over a secure WebSocket (works on LTE, Wi-Fi and hotspots).
+   It mimics the small part of the PeerJS API the table code uses. Voice chat still uses PeerJS calls. */
+(function(){
+const RealPeer=window.Peer;window.RealPeer=RealPeer;
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
+const ROOT='omahaflips/v3/',VPFX='ofv3-';
+const enc=new TextEncoder(),dec=new TextDecoder();
+const rnd=n=>{let s='';const a='abcdefghijkmnpqrstuvwxyz23456789';for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s};
+
+/* --- a tiny MQTT 3.1.1 client (QoS 0 only) --- */
+let ws=null,ready=false,bi=0,pid=1,buf=new Uint8Array(0),pingT=null,waiters=[],retryT=null,connT=null;
+const subs=new Map(); // topic -> handler
+function vlen(n){const o=[];do{let b=n%128;n=Math.floor(n/128);if(n>0)b|=128;o.push(b)}while(n>0);return o}
+function str(s){const b=enc.encode(s);return[b.length>>8,b.length&255,...b]}
+function pkt(h,body){const a=new Uint8Array(1+vlen(body.length).length+body.length);const l=vlen(body.length);a[0]=h;a.set(l,1);a.set(body,1+l.length);return a}
+function send(a){try{if(ws&&ws.readyState===1)ws.send(a)}catch(e){}}
+function subPkt(t){const id=pid++&65535||1;return pkt(0x82,new Uint8Array([id>>8,id&255,...str(t),0]))}
+function open(){
+  clearTimeout(retryT);clearTimeout(connT);
+  const url=BROKERS[bi%BROKERS.length];
+  try{ws=new WebSocket(url,'mqtt')}catch(e){fail();return}
+  ws.binaryType='arraybuffer';buf=new Uint8Array(0);
+  const me=ws;
+  connT=setTimeout(()=>{if(!ready&&me===ws){try{me.close()}catch(e){}}},8000);
+  ws.onopen=()=>{const body=[0,4,77,81,84,84,4,2,0,30,...str('of'+rnd(12))];send(pkt(0x10,new Uint8Array(body)))};
+  ws.onmessage=ev=>{const d=new Uint8Array(ev.data);const n=new Uint8Array(buf.length+d.length);n.set(buf);n.set(d,buf.length);buf=n;parse()};
+  ws.onclose=()=>{if(me!==ws)return;fail()};
+  ws.onerror=()=>{};
+}
+function fail(){ready=false;clearInterval(pingT);ws=null;bi++;clearTimeout(retryT);retryT=setTimeout(open,bi%BROKERS.length===0?2000:200)}
+function parse(){
+  for(;;){if(buf.length<2)return;let mul=1,len=0,i=1,b;
+    do{if(i>=buf.length)return;b=buf[i++];len+=(b&127)*mul;mul*=128}while(b&128);
+    if(buf.length<i+len)return;const type=buf[0]>>4,flags=buf[0]&15,body=buf.slice(i,i+len);buf=buf.slice(i+len);
+    if(type===2){clearTimeout(connT);if(body[1]===0){ready=true;bi=0;clearInterval(pingT);pingT=setInterval(()=>send(new Uint8Array([0xC0,0])),20000);
+        for(const t of subs.keys())send(subPkt(t));const w=waiters;waiters=[];w.forEach(f=>{try{f()}catch(e){}})}else{try{ws.close()}catch(e){}}}
+    else if(type===3){const tl=(body[0]<<8)|body[1];const topic=dec.decode(body.slice(2,2+tl));let p=2+tl;if((flags>>1)&3)p+=2;
+      const h=subs.get(topic);if(h){let m;try{m=JSON.parse(dec.decode(body.slice(p)))}catch(e){m=null}if(m)try{h(m)}catch(e){console.error(e)}}}
+  }
+}
+function whenReady(f){if(ready)f();else{waiters.push(f);if(!ws&&!retryT)open()}}
+function pub(id,m){whenReady(()=>send(pkt(0x30,new Uint8Array([...str(ROOT+id),...enc.encode(JSON.stringify(m))]))))}
+function sub(id,fn){const t=ROOT+id;subs.set(t,fn);if(ready)send(subPkt(t));else whenReady(()=>{})}
+function unsub(id){const t=ROOT+id;subs.delete(t);if(ready){const pi=pid++&65535||1;send(pkt(0xA2,new Uint8Array([pi>>8,pi&255,...str(t)])))}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!ws||ws.readyState>1)){clearTimeout(retryT);open()}});
+window.addEventListener('online',()=>{if(!ready){clearTimeout(retryT);open()}});
+open();
+
+/* --- connections --- */
+class Conn{
+  constructor(p,peerId,cid){this._p=p;this.peer=peerId;this.cid=cid;this.open=false;this.h={};this.lastSeen=Date.now()}
+  on(e,f){(this.h[e]=this.h[e]||[]).push(f)}
+  _emit(e,x){(this.h[e]||[]).slice().forEach(f=>{try{f(x)}catch(err){console.error(err)}})}
+  _up(){if(this.open||this._dead)return;this.open=true;this.lastSeen=Date.now();setTimeout(()=>this._emit('open'),0)}
+  send(d){if(!this.open)return;pub(this.peer,{t:'d',cid:this.cid,from:this._p.id,d})}
+  close(){if(this._dead)return;pub(this.peer,{t:'fin',cid:this.cid,from:this._p.id});this._down()}
+  _down(){if(this._dead)return;this._dead=true;const was=this.open;this.open=false;this._p.conns.delete(this.cid);clearTimeout(this._synT);setTimeout(()=>this._emit(was?'close':'error',{type:'peer-unavailable'}),0)}
+}
+class RelayPeer{
+  constructor(id){
+    this.id=id||rnd(12);this.h={};this.open=false;this.destroyed=false;this.disconnected=false;this.conns=new Map();
+    this._nonce=rnd(8);this._probe='q'+rnd(10);this._taken=false;
+    sub(this.id,m=>this._msg(m));sub(this._probe,m=>{if(m&&m.t==='me')this._taken=true});
+    /* make sure nobody else already has this id (a table code that's taken, or the same player in another tab) */
+    whenReady(()=>{if(this.destroyed)return;pub(this.id,{t:'who',from:this._probe,n:this._nonce});
+      setTimeout(()=>{unsub(this._probe);if(this.destroyed)return;
+        if(this._taken){this._emit('error',{type:'unavailable-id'});return}
+        this.open=true;this._emit('open',this.id);this._voice()},1300)});
+    this._hb=setInterval(()=>this._beat(),3000);
+  }
+  on(e,f){(this.h[e]=this.h[e]||[]).push(f)}
+  _emit(e,x){(this.h[e]||[]).slice().forEach(f=>{try{f(x)}catch(err){console.error(err)}})}
+  _msg(m){if(this.destroyed||!m)return;
+    if(m.t==='who'){if(m.n!==this._nonce&&this.open)pub(m.from,{t:'me'});return}
+    if(m.t==='syn'){if(!this.open)return;let c=this.conns.get(m.cid);
+      if(!c){c=new Conn(this,m.from,m.cid);this.conns.set(m.cid,c);this._emit('connection',c)}
+      pub(m.from,{t:'ack',cid:m.cid,from:this.id});c._up();return}
+    const c=this.conns.get(m.cid);
+    if(!c){if((m.t==='d'||m.t==='hb')&&m.from)pub(m.from,{t:'fin',cid:m.cid,from:this.id});return}
+    c.lastSeen=Date.now();
+    if(m.t==='ack')c._up();
+    else if(m.t==='d'){if(c.open)c._emit('data',m.d)}
+    else if(m.t==='fin')c._down();
+  }
+  _beat(){const now=Date.now();for(const c of [...this.conns.values()]){if(!c.open)continue;
+    if(now-c.lastSeen>15000){c.close();continue}pub(c.peer,{t:'hb',cid:c.cid,from:this.id})}}
+  connect(target){const c=new Conn(this,target,'c'+rnd(10));this.conns.set(c.cid,c);
+    const syn=()=>{if(!c.open&&!c._dead)pub(target,{t:'syn',from:this.id,cid:c.cid})};
+    syn();setTimeout(syn,1200);setTimeout(syn,2600);
+    c._synT=setTimeout(()=>{if(!c.open&&!c._dead){c._down();this._emit('error',{type:'peer-unavailable'})}},6000);
+    return c}
+  reconnect(){if(!ready){clearTimeout(retryT);open()}}
+  destroy(){if(this.destroyed)return;this.destroyed=true;this.open=false;for(const c of [...this.conns.values()])c.close();unsub(this.id);clearInterval(this._hb);try{this._v&&this._v.destroy()}catch(e){}}
+  /* voice chat rides on PeerJS calls, under a matching id */
+  _voice(){if(this._v||typeof RealPeer!=='function'||this.id.startsWith('omahaflip'))return;
+    try{const v=new RealPeer(VPFX+this.id);this._v=v;
+      v.on('call',c=>{c._of=c.peer.slice(VPFX.length);this._emit('call',c)});
+      v.on('disconnected',()=>{setTimeout(()=>{try{if(!v.destroyed&&v.disconnected)v.reconnect()}catch(e){}},800)});
+      v.on('error',()=>{})}catch(e){}}
+  call(id,stream){if(!this._v)return null;const c=this._v.call(VPFX+id,stream);if(c)c._of=id;return c}
+}
+window.Peer=RelayPeer;
+})();
+
 /* ---------- live table over PeerJS (host relays everyone's state) ---------- */
 window.OF_HOSTED_CHAT=true;
-const PFX='omahaflip-v2-';
+const PFX='omahaflip-v3-';
 function hostChat(list,nm){const add=ingest(list,nm);if(add.length){const msg={t:'chat',add};for(const c of conns.values()){if(c.open)try{c.send(msg)}catch(e){}}try{renderChat()}catch(e){}}}
 const CODECH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 let peer=null,hostPeer=null,hostConn=null,conns=new Map(),presMap=new Map(),myId=null,isHost=false,code='',peersHandlers=[],prevIds=new Set(),retryT=null;
@@ -1864,7 +1970,7 @@ function joinScan(from,to,first){
   const next=()=>{if(g>to){if(first&&(first==='reopen'||store.get('of-sess-'+code,null))){lerr('Reopening table '+code+'…');becomeHost(0,true,true);return}if(first){/* the host's phone may be asleep or in another app for a moment: keep looking for a while before giving up */
       if(!room&&joinTok===myTok&&Date.now()-joinStart<120000){lerr('Looking for table '+code+'… The host needs Omaha Flips open on their screen.');setTimeout(()=>{if(!room&&joinTok===myTok)joinScan(0,6,true)},1500)}
       else if(!room&&joinTok===myTok)lerr('No table found with code '+code+'. Make sure the host has Omaha Flips open, then tap Join again.')}else{setConn('Reconnecting…');clearTimeout(retryT);retryT=setTimeout(()=>joinScan(gen,gen+2),2500)}return}
-    const cur=g++;tryHost(cur,first?3500:2500,c=>adoptHostConn(c,cur),next)};
+    const cur=g++;tryHost(cur,first?5000:4000,c=>adoptHostConn(c,cur),next)};
   next();
 }
 function hostLost(){
@@ -1873,11 +1979,11 @@ function hostLost(){
     /* the lowest id still at the table takes over hosting */
     const cand=lastList.map(x=>x.id).filter(id=>id&&id!==hostOwner).sort();
     if(cand[0]===myId)becomeHost(gen+1,false);
-    else{const g0=gen;let n=0;const loop=()=>{if(hostConn||isHost)return;n++;tryHost(g0+1,2500,c=>adoptHostConn(c,g0+1),()=>tryHost(g0,2000,c=>adoptHostConn(c,g0),()=>{if(n<20)setTimeout(loop,1500);else joinScan(g0,g0+3)}))};loop()}
+    else{const g0=gen;let n=0;const loop=()=>{if(hostConn||isHost)return;n++;tryHost(g0+1,4000,c=>adoptHostConn(c,g0+1),()=>tryHost(g0,3500,c=>adoptHostConn(c,g0),()=>{if(n<20)setTimeout(loop,1500);else joinScan(g0,g0+3)}))};loop()}
   },2500);
 }
 /* a host that slept and woke up alone rejoins the table under the newer host */
-setInterval(()=>{if(!isHost||!hadClients||conns.size||!peer)return;tryHost(gen+1,2500,c=>{try{hostPeer&&hostPeer.destroy()}catch(e){}hostPeer=null;isHost=false;adoptHostConn(c,gen+1);flash('Rejoined the table')},()=>{})},5000);
+setInterval(()=>{if(!isHost||!hadClients||conns.size||!peer)return;tryHost(gen+1,4000,c=>{try{hostPeer&&hostPeer.destroy()}catch(e){}hostPeer=null;isHost=false;adoptHostConn(c,gen+1);flash('Rejoined the table')},()=>{})},5000);
 const sheetShown=new Set();
 function startTable(){code=newCode();lerr('Opening a table…');lastList=[];makeIdentity(()=>becomeHost(0,true))}
 function joinTable(c){joinTok++;joinStart=Date.now();code=c.toUpperCase();lerr('Connecting to table '+code+'…');const go=()=>joinScan(0,6,true);if(peer&&myId)go();else makeIdentity(go)}
@@ -1921,9 +2027,9 @@ function vcBtns(){const on=!!vStream;$('vc').textContent=on?'LEAVE VOICE CHAT':'
   /* how many OTHER players are in voice right now (never counts you) */
   const n=peers.filter(p=>!p.isMe&&p.presence&&p.presence.vc===1).length;
   if(n)$('vc').insertAdjacentHTML('beforeend',`<small class="vcn">${on?'with ':''}${n} ${on?'other'+(n>1?'s':''):(n>1?'people':'person')+' talking'}</small>`)}
-function wireCall(c){calls.set(c.peer,c);
-  c.on('stream',st=>{let a=auds.get(c.peer);if(!a){a=document.createElement('audio');a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);auds.set(c.peer,a)}a.srcObject=st;a.play().catch(()=>{})});
-  const end=()=>{calls.delete(c.peer);const a=auds.get(c.peer);if(a){a.srcObject=null;a.remove();auds.delete(c.peer)}};c.on('close',end);c.on('error',end)}
+function wireCall(c){const key=c._of||c.peer;calls.set(key,c);
+  c.on('stream',st=>{let a=auds.get(key);if(!a){a=document.createElement('audio');a.autoplay=true;a.setAttribute('playsinline','');document.body.appendChild(a);auds.set(key,a)}a.srcObject=st;a.play().catch(()=>{})});
+  const end=()=>{calls.delete(key);const a=auds.get(key);if(a){a.srcObject=null;a.remove();auds.delete(key)}};c.on('close',end);c.on('error',end)}
 function syncCalls(){
   if(!peer||typeof peer.call!=='function')return;
   const want=new Set(peers.filter(p=>!p.isMe&&p.presence&&p.presence.vc===1).map(p=>p.peer));
