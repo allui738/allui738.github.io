@@ -630,6 +630,14 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 .vtoast b{color:#7fe0a0}
 .vtoast button{border:0;border-radius:10px;padding:7px 12px;background:linear-gradient(180deg,#3fd083,#22a65e);color:#05210f;font:700 12.5px Inter,sans-serif;white-space:nowrap}
 
+
+/* new player sat down: dealer's choice */
+.jpop{position:fixed;left:50%;transform:translateX(-50%);top:calc(72px + env(safe-area-inset-top));z-index:40;width:min(92vw,380px);box-sizing:border-box;padding:14px 14px 12px;border-radius:18px;background:rgba(14,22,18,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(239,195,90,.5);color:var(--ink);box-shadow:0 18px 50px rgba(0,0,0,.6);animation:pop .2s ease-out;font-family:Inter,sans-serif}
+.jpop p{margin:0 0 4px;font:500 15px/1.3 Inter,sans-serif}.jpop p b{color:var(--gold);font-weight:700}
+.jpop small{display:block;margin:0 0 12px;font-size:12.5px;line-height:1.4;color:rgba(236,240,234,.68)}
+.jpop .jrow{display:flex;gap:8px}.jpop button{flex:1;min-height:42px;border-radius:12px;font:700 13.5px Inter,sans-serif;border:0;cursor:pointer}
+.jpop .jgo{background:var(--goldg);color:#2b1c00}.jpop .jno{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid rgba(255,255,255,.14)}
+
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -708,7 +716,7 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 </div>
 <div class="sqz hide" id="sqz"><div class="sqbox"><div class="sqctx" id="sqctx"></div><p class="sqlab" id="sqlab"></p><div class="big" id="big"></div><div id="sqctl"><div class="row sm3"><button class="alt" id="sqrot">TURN SIDEWAYS</button><button class="alt" id="sqaside">SET ASIDE</button><button class="alt" id="sqclose">PUT IT BACK</button></div><div class="row"><button class="alt slamb" id="sqslam">SLAM IT<small>got the nuts?</small></button><button class="go" id="sqflip">FLIP IT</button></div></div><p class="sqhint" id="sqhint"></p></div></div>
 <div class="spy hide" id="spy"><p class="sqlab" id="spylab"></p><div class="big sm" id="spybig"></div></div>
-<div class="toast hide" id="toast"></div><div class="vtoast hide" id="vtoast"></div><button class="spyb hide" id="spyb"></button>
+<div class="toast hide" id="toast"></div><div class="vtoast hide" id="vtoast"></div><div class="jpop hide" id="jpop" role="dialog"></div><button class="spyb hide" id="spyb"></button>
 <div class="chat hide" id="chat" role="dialog" aria-label="Table chat"><div class="chatbox"><div class="chhead"><b>Table chat</b><button class="ghost" id="chx">Close</button></div><div class="chlist" id="chlist"><p class="empty">No messages yet. Say something.</p></div><form class="chf" id="chf"><input id="chi" maxlength="140" placeholder="Say something…" autocomplete="off" aria-label="Message"><button class="go" type="submit">SEND</button></form></div></div>
 <div class="cfm hide" id="cfm" role="dialog" aria-modal="true" aria-labelledby="cfmt"><div class="cfmbox"><h3 id="cfmt">Reset standings?</h3><p id="cfmp">This wipes every player's wins, chops and losses for the whole table. It can't be undone.</p><div class="cfmrow"><button class="cfmno" id="cfmno">Cancel</button><button class="cfmyes" id="cfmyes">Yes, reset</button></div></div></div>
 <div class="modal hide" id="setm" role="dialog" aria-modal="true" aria-labelledby="sett"><div class="mbox"><div class="mhead"><h3 id="sett">Settings</h3><button class="ghost" data-close>Done</button></div>
@@ -919,17 +927,32 @@ function autoRun(){
 let lastRender={e:0,b:0},eqShown=null,pending=null;
 /* a real player sat down while bots are in the hand: take the bots out and deal a fresh hand */
 let botDropT=null;
-function dropBots(){if(!room||!G||!mine||mine.g!==G||!Array.isArray(G.pp)||!G.pp.some(p=>!p))return;
-  /* a friend is here but not seated yet: stop the bot hand from rolling into another one */
-  if(peers.filter(p=>p.kind==='viewer').length>=2){clearTimeout(autoNextT);autoNextT=null;clearTimeout(botT);botT=null}
-  const real=seatClaims().filter(Boolean).length;if(real<2||botDropT)return;
-  botDropT=setTimeout(()=>{botDropT=null;if(!mine||!G||!G.pp.some(p=>!p)||seatClaims().filter(Boolean).length<2)return;flash('A player joined. Bots are out, fresh hand.');deal()},800)}
+function dropBots(){}
+/* someone new sat down: the dealer chooses what happens */
+let seatSeen=null;
+function joinWatch(){if(!room)return;const cl=seatClaims().filter(Boolean);const ids=new Set(cl.map(c=>c.peer));
+  if(seatSeen===null){seatSeen=ids;return}
+  const fresh=cl.filter(c=>!c.me&&!seatSeen.has(c.peer));seatSeen=ids;
+  if(!fresh.length||!mine||!G||mine.g!==G)return;
+  if(Array.isArray(G.pp)&&fresh.every(c=>G.pp.includes(c.peer)))return;
+  showJoin(fresh.map(c=>c.nm),Array.isArray(G.pp)&&G.pp.some(p=>!p))}
+function showJoin(names,bots){const el=$('jpop');if(!el)return;
+  const nm=names.length>1?names.slice(0,-1).join(', ')+' and '+names[names.length-1]:names[0];const one=names.length===1;
+  el.innerHTML=bots
+    ?`<p><b>${esc(nm)}</b> sat down</p><small>Bots never play with real players.</small><div class="jrow"><button class="jgo" data-j="deal">End hand · play with ${one?esc(names[0]):'them'}</button></div>`
+    :`<p><b>${esc(nm)}</b> sat down</p><small>${one?'They':'They'}'ll be dealt in next hand. Or start fresh: reset standings and deal a new hand now.</small><div class="jrow"><button class="jno" data-j="keep">Keep going</button><button class="jgo" data-j="fresh">Start fresh</button></div>`;
+  el.classList.remove('hide');try{sfx('ping')}catch(e){}
+  if(bots){clearTimeout(botT);botT=null;clearTimeout(autoNextT);autoNextT=null}}
+$('jpop').addEventListener('click',e=>{const b=e.target.closest('[data-j]');if(!b)return;const j=b.dataset.j;$('jpop').classList.add('hide');
+  if(j==='fresh'){stE=Date.now();store.set('of-st',{});store.set('of-st-e',stE);if(mine)mine.g={...mine.g,st:{}};drawStats({})}
+  if(j==='deal'||j==='fresh'){clearTimeout(autoT);autoT=null;deal()}});
 function refresh(){
   try{dropBots()}catch(e){}
   try{saveSession()}catch(e){}
   try{ensureSeat()}catch(e){}
   try{renderChat()}catch(e){}
   G=pickState();
+  try{joinWatch()}catch(e){}
   const iDeal=!!mine;
   const s=seatedNames();
   $('conn').innerHTML=room?`Table <b>${esc(code)}</b> · <b>${peers.length}</b> here · <b>${s?s.length:0}</b> seated`:'Solo practice';
