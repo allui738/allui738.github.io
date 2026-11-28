@@ -643,6 +643,8 @@ body:has(.jpop:not(.hide)) .vtoast,body:has(.jpop:not(.hide)) .spyb{top:calc(226
 .vtoast span{white-space:nowrap}
 /* peel card sized to the space left, so the buttons are always on screen */
 .sqz .big:not(.land){width:var(--bigw,min(84vw,320px))!important;min-width:150px}
+#sqflip.wait,#sqslam.wait{opacity:.45;filter:saturate(.6)}
+.sqhint.warn{color:var(--gold)!important;font-weight:700}
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -1677,14 +1679,15 @@ function fitSq(){if(!sq)return;const z=$('sqz'),big=$('big');if(z.classList.cont
   used+=parseFloat(getComputedStyle(big).marginBottom)||0;
   const w=Math.max(150,Math.min(window.innerWidth*.84,320,(vh-used)/1.4));z.style.setProperty('--bigw',Math.floor(w)+'px')}
 window.addEventListener('resize',()=>{try{fitSq()}catch(e){}});if(window.visualViewport)visualViewport.addEventListener('resize',()=>{try{fitSq()}catch(e){}});
-function sqButtons(){if(!sq||!G)return;sqCtx();requestAnimationFrame(()=>{try{fitSq()}catch(e){}});const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;const tn=FD&&!FD.done&&FD.turn>=0&&FD.turn!==sq.i?String(G.who[FD.turn]||'').slice(0,12):'';$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':tn?(tn+' flipping…').toUpperCase():'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
+function sqFlash(t){const h=$('sqhint');if(!h)return flash(t);h.textContent=t;h.classList.add('warn');clearTimeout(sqFlash.t);sqFlash.t=setTimeout(()=>{h.classList.remove('warn');h.textContent='Peel from any edge or corner · hold the center to tear out a dot'},2200)}
+function sqButtons(){if(!sq||!G)return;sqCtx();requestAnimationFrame(()=>{try{fitSq()}catch(e){}});const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=false;$('sqslam').disabled=false;$('sqflip').classList.toggle('wait',!can);$('sqslam').classList.toggle('wait',!can);$('sqflip').textContent='FLIP IT';$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
 let lockY=0;
 function lockScroll(on){const b=document.body;if(on&&!b.classList.contains('locked')){lockY=window.scrollY;b.style.top=-lockY+'px';b.classList.add('locked')}else if(!on&&b.classList.contains('locked')){b.classList.remove('locked');b.style.top='';window.scrollTo(0,lockY)}}
 function closeSqueeze(){if(!sq)return;sq=null;$('sqz').classList.add('hide');lockScroll(false);$('big').classList.remove('shown');$('sqctl').classList.remove('hide');if(room)room.presence({pk:null}).catch(()=>{});if(pendingJoin){const p=pendingJoin;pendingJoin=null;setTimeout(()=>showJoin(...p),250)}}
 let sqLand=store.get('of-land',false)===true;
 const r3=v=>Math.round(v*1000)/1000;
 function sendPk(force){if(!room||!sq)return;if(G&&(G.wp===0||!canFlipCard(sq.i,sq.j))){if(force)room.presence({pk:null}).catch(()=>{});return}const t=performance.now();if(force||t-pkT>45){pkT=t;room.presence({pk:{e:sq.e,i:sq.i,j:sq.j,a:sq.a?sq.a.map(r3):null,b:sq.b?sq.b.map(r3):null,tr:sq.torn?1:0,l:sqLand}}).catch(()=>{})}}
-function commitSqueeze(){if(!sq||sq.revealed)return;const {i,j}=sq;if(!canFlipCard(i,j)){flash(G&&G.n<4?'Flips start after the board is out':'Wait for your turn to flip');return}manualKeys.add(G.e+':'+i+':'+j);sq.revealed=true;sq.drag=null;sq.a=sq.b=null;
+function commitSqueeze(){if(!sq||sq.revealed)return;const {i,j}=sq;if(!canFlipCard(i,j)){sqFlash(G&&G.n<4?'Flips start after the board is out':'Wait for your turn to flip');return}manualKeys.add(G.e+':'+i+':'+j);sq.revealed=true;sq.drag=null;sq.a=sq.b=null;
   $('big').classList.add('shown');$('sqctl').classList.add('hide');$('sqhint').textContent='Tap the card to go back to the table';
   if(room)room.presence({pk:null}).catch(()=>{});if(G&&canFlipCard(i,j))doFlip(i,j)}
 $('big').addEventListener('pointerdown',e=>{
@@ -1710,7 +1713,7 @@ const sqEnd=e=>{if(!sq||!sq.drag||e.pointerId!==sq.drag.id)return;if(sq.drag.hol
 $('big').addEventListener('pointerup',sqEnd);$('big').addEventListener('pointercancel',sqEnd);
 $('sqflip').addEventListener('click',commitSqueeze);
 $('sqaside').addEventListener('click',()=>{if(!sq||!G)return;toggleAside(sq.i,sq.j);sqButtons()});
-$('sqslam').addEventListener('click',()=>{if(!sq||!G)return;const {i,j}=sq;if(!canFlipCard(i,j))return;closeSqueeze();slamCard(i,j)});
+$('sqslam').addEventListener('click',()=>{if(!sq||!G)return;const {i,j}=sq;if(!canFlipCard(i,j)){sqFlash(G.n<4?'Flips start after the board is out':'Wait for your turn to flip');return}closeSqueeze();slamCard(i,j)});
 $('sqclose').addEventListener('click',closeSqueeze);
 $('sqrot').addEventListener('click',()=>{if(!sq)return;sqLand=!sqLand;store.set('of-land',sqLand);$('big').classList.toggle('land',sqLand);$('sqrot').textContent=sqLand?'STAND IT UP':'TURN SIDEWAYS';sq.a=sq.b=null;setPeel($('big'),null,null);sendPk(true)});
 $('seats').addEventListener('click',e=>{const el=e.target.closest('[data-sq]');if(el&&G){openSqueeze(+el.dataset.s,+el.dataset.j)}});
