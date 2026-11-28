@@ -260,7 +260,7 @@ button.c.tap:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .ix.tl{left:4%;top:2.5%}.ix.br{right:4%;bottom:2.5%;transform:rotate(180deg)}
 .ixs{position:absolute;font-size:8cqw;line-height:1}.ixs.tl{left:15.5%;top:12.5%}.ixs.br{right:15.5%;bottom:12.5%;transform:rotate(180deg)}
 .pip{position:absolute;font-size:13cqw;line-height:1}
-.ace{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:42cqw}
+.ace{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30cqw}
 .court{position:absolute;inset:13% 17%;border:2px solid currentColor;border-radius:4px;overflow:hidden;background:#fbf7ec}
 .court svg{display:block}
 .shade{position:absolute;inset:0;filter:drop-shadow(0 0 6px #000a);pointer-events:none}
@@ -641,6 +641,8 @@ button.c.tap{box-shadow:0 0 0 2.5px var(--gold),0 0 16px rgba(239,195,90,.45),0 
 /* stack under the new-player popup instead of hiding behind it */
 body:has(.jpop:not(.hide)) .vtoast,body:has(.jpop:not(.hide)) .spyb{top:calc(226px + env(safe-area-inset-top))}
 .vtoast span{white-space:nowrap}
+/* peel card sized to the space left, so the buttons are always on screen */
+.sqz .big:not(.land){width:var(--bigw,min(84vw,320px))!important;min-width:150px}
 </style>
 <link rel="manifest" href="/manifest-v2.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -1644,7 +1646,7 @@ function openSqueeze(i,j){
   if(!canPeek(i,j))return;
   sqLand=false; /* every card opens standing up; Turn sideways is one tap away */
   sq={i,j,e:G.e,a:null,b:null,drag:null};
-  $('big').innerHTML=bigFace(G.h[i][j]);$('sqlab').textContent=`${G.who[i]} · card ${j+1}`;$('big').classList.remove('shown');$('sqctl').classList.remove('hide');$('sqhint').textContent='Peel from any side or corner · press and hold near the center to tear out the middle of the card and reveal a dot · Put it back returns to the table';$('big').classList.toggle('land',sqLand);$('sqrot').textContent=sqLand?'STAND IT UP':'TURN SIDEWAYS';
+  $('big').innerHTML=bigFace(G.h[i][j]);$('sqlab').textContent=`${G.who[i]} · card ${j+1}`;$('big').classList.remove('shown');$('sqctl').classList.remove('hide');$('sqhint').textContent='Peel from any edge or corner · hold the center to tear out a dot';$('big').classList.toggle('land',sqLand);$('sqrot').textContent=sqLand?'STAND IT UP':'TURN SIDEWAYS';
   $('big')._tear=null;$('big')._peel=null;
   $('sqz').classList.remove('hide');lockScroll(true);setPeel($('big'),null,null);
   {const ts=tornCards.get(G.e+':'+i+':'+j);if(ts){tearOut($('big'),ts,false);sq.torn=ts}}
@@ -1668,7 +1670,14 @@ function sqCtx(){const el=$('sqctx');if(!el)return;if(!sq||!G){el.innerHTML='';r
       line=`<div class="sqbeat">To beat: <b>${esc(G.who[D.barI])}</b> · ${esc(describe(D.bar))}</div>`}
     line+=myHand}
   el.innerHTML=`<div class="sqboard">${board}</div>${line}`}
-function sqButtons(){if(!sq||!G)return;sqCtx();const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
+function fitSq(){if(!sq)return;const z=$('sqz'),big=$('big');if(z.classList.contains('hide'))return;
+  const vh=(window.visualViewport&&window.visualViewport.height)||window.innerHeight,cs=getComputedStyle(z);
+  let used=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom)+14;
+  for(const id of['sqctx','sqlab','sqctl','sqhint']){const e=$(id);if(e&&!e.classList.contains('hide')){const m=getComputedStyle(e);used+=e.offsetHeight+parseFloat(m.marginTop)+parseFloat(m.marginBottom)}}
+  used+=parseFloat(getComputedStyle(big).marginBottom)||0;
+  const w=Math.max(150,Math.min(window.innerWidth*.84,320,(vh-used)/1.4));z.style.setProperty('--bigw',Math.floor(w)+'px')}
+window.addEventListener('resize',()=>{try{fitSq()}catch(e){}});if(window.visualViewport)visualViewport.addEventListener('resize',()=>{try{fitSq()}catch(e){}});
+function sqButtons(){if(!sq||!G)return;sqCtx();requestAnimationFrame(()=>{try{fitSq()}catch(e){}});const can=canFlipCard(sq.i,sq.j);$('sqflip').disabled=!can;$('sqslam').disabled=!can;$('sqflip').textContent=can?'FLIP IT':(G.n<4?'FLIP AFTER THE BOARD':'NOT YOUR TURN');$('sqaside').textContent=asideFor(G,sq.i).includes(sq.j)?'BRING IT BACK':'SET ASIDE'}
 let lockY=0;
 function lockScroll(on){const b=document.body;if(on&&!b.classList.contains('locked')){lockY=window.scrollY;b.style.top=-lockY+'px';b.classList.add('locked')}else if(!on&&b.classList.contains('locked')){b.classList.remove('locked');b.style.top='';window.scrollTo(0,lockY)}}
 function closeSqueeze(){if(!sq)return;sq=null;$('sqz').classList.add('hide');lockScroll(false);$('big').classList.remove('shown');$('sqctl').classList.remove('hide');if(room)room.presence({pk:null}).catch(()=>{});if(pendingJoin){const p=pendingJoin;pendingJoin=null;setTimeout(()=>showJoin(...p),250)}}
