@@ -1656,7 +1656,7 @@ function openSqueeze(i,j){
 function sqCtx(){const el=$('sqctx');if(!el)return;if(!sq||!G){el.innerHTML='';return}
   const B=G.b||[],board=Array.from({length:5},(_,k)=>B[k]?cardH(P(B[k])):'<div class="c slot"></div>').join('');
   let line='';
-  if(B.length<5)line='<div class="sqbeat muted">The board runs out before anyone flips</div>';
+  if(B.length<5){const row=G.h[sq.i].map((c,j)=>`<div class="c back${j===sq.j?' cur':''}"></div>`).join('');line=`<div class="sqbeat muted">Peek now · flips start after the board</div><div class="sqopp mine">${row}</div><div class="sqme">Your hand</div>`}
   else if(G.m==='f'&&FD){const D=FD,me=sq.i,mine=D.seats[me];
     const nm=i=>i===me?'You':esc(G.who[i]);
     /* your whole hand: flipped cards face up, the rest face down, the card you're peeling outlined */
